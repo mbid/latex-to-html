@@ -1,8 +1,10 @@
+pub mod ast;
 pub mod parse;
 
 #[test]
 fn parse_eqlog_paper() {
-    use crate::parse::{document, Document};
+    use crate::ast::Document;
+    use crate::parse::document;
     let src = std::fs::read_to_string("example.tex").unwrap();
     let (i, Document { preamble, parts }) = document(src.as_str()).unwrap();
     assert!(i.is_empty());

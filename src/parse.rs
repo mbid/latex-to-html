@@ -6,6 +6,8 @@ use nom::multi::{count, many0};
 use nom::sequence::{pair, tuple};
 use nom::{IResult, Parser};
 
+use crate::ast::*;
+
 type Error<'a> = nom::error::Error<&'a str>;
 
 type Result<'a, O> = IResult<&'a str, O, Error<'a>>;
@@ -311,20 +313,6 @@ pub fn emph(i: &str) -> Result<Emph> {
     Ok((i, Emph(par)))
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ParagraphPart<'a> {
-    InlineWhitespace(&'a str),
-    TextToken(&'a str),
-    InlineMath(&'a str),
-    DisplayMath(&'a str),
-    Ref(&'a str),
-    Eqref(&'a str),
-    Emph(Paragraph<'a>),
-    Comment(&'a str),
-    Label(&'a str),
-    Qed,
-}
-
 pub fn comment(i: &str) -> Result<ParagraphPart> {
     let (i, _) = char('%')(i)?;
     let (i, comment) = take_while(|c| c != '\n')(i)?;
@@ -346,8 +334,6 @@ pub fn eqref(i: &str) -> Result<ParagraphPart> {
     let (i, val) = command("eqref", label_value)(i)?;
     Ok((i, ParagraphPart::Eqref(val)))
 }
-
-pub type Paragraph<'a> = Vec<ParagraphPart<'a>>;
 
 pub fn paragraph<'a>(i: &'a str) -> Result<Paragraph<'a>> {
     let ws_part = |i: &'a str| {
@@ -476,23 +462,6 @@ fn paragraphs0<'a>(i: &'a str) -> Result<'a, Vec<Paragraph<'a>>> {
     intersperse0(paragraph, any_ws)(i)
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum DocumentPart<'a> {
-    FreeParagraph(Paragraph<'a>),
-    Title(Paragraph<'a>),
-    Author(Paragraph<'a>),
-    Date(),
-    Maketitle(),
-    Section(Paragraph<'a>),
-    Subsection(Paragraph<'a>),
-    Abstract(Vec<Paragraph<'a>>),
-    Proposition(Vec<Paragraph<'a>>),
-    Definition(Vec<Paragraph<'a>>),
-    Lemma(Vec<Paragraph<'a>>),
-    Proof(Vec<Paragraph<'a>>),
-    Label(&'a str),
-}
-
 pub fn title<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
     command("title", paragraph)
         .map(DocumentPart::Title)
@@ -586,12 +555,6 @@ pub fn documentclass<'a>(i: &'a str) -> Result<()> {
         many0(none_of("[]{}")),
     )(i)?;
     Ok((i, ()))
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Document<'a> {
-    pub preamble: &'a str,
-    pub parts: Vec<DocumentPart<'a>>,
 }
 
 pub fn document<'a>(i: &'a str) -> Result<Document<'a>> {
