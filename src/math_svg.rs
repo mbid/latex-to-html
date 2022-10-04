@@ -102,8 +102,27 @@ fn test_latex_to_svg() {
 
 pub struct InlineMathSvg {
     pub svg: String,
-    pub baseline_pt: f64,
-    pub height_pt: f64,
+    pub baseline_em: f64,
+    pub height_em: f64,
+}
+
+pub fn svg_height_to_em(
+    mut svg: minidom::Element,
+) -> Result<(minidom::Element, f64), LatexToSvgError> {
+    let bad_svg = || LatexToSvgError::BadSvg;
+
+    let height_attr = svg.attr("height").ok_or(bad_svg())?;
+    let height_pt: f64 = height_attr
+        .strip_suffix("pt")
+        .ok_or(bad_svg())?
+        .parse()
+        .map_err(|_| bad_svg())?;
+
+    let height_em = height_pt / 10.0;
+    svg.set_attr("height", format!("{height_em}em"));
+    svg.set_attr("width", format!("100%"));
+
+    Ok((svg, height_em))
 }
 
 pub fn inline_math_to_svg(preamble: &str, math: &str) -> Result<InlineMathSvg, LatexToSvgError> {
@@ -114,20 +133,10 @@ pub fn inline_math_to_svg(preamble: &str, math: &str) -> Result<InlineMathSvg, L
     let svg = latex_to_svg(preamble, &wrapped_math)?;
 
     let bad_svg = || LatexToSvgError::BadSvg;
+    let svg_el: minidom::Element = svg.parse().map_err(|_| bad_svg())?;
+    let (mut svg_el, height_em) = svg_height_to_em(svg_el)?;
 
-    let mut svg_el: minidom::Element = svg.parse().map_err(|_| bad_svg())?;
-
-    let height_attr = svg_el.attr("height").ok_or(bad_svg())?;
-    let height_pt: f64 = height_attr
-        .strip_suffix("pt")
-        .ok_or(bad_svg())?
-        .parse()
-        .map_err(|_| bad_svg())?;
-
-    let height_em = height_pt / 10.0;
-    svg_el.set_attr("height", format!("{height_em}em"));
-    svg_el.set_attr("width", format!("100%"));
-    svg_el.set_attr("shape-rendering", format!("geometricPrecision"));
+    let bad_svg = || LatexToSvgError::BadSvg;
 
     let g_el: &mut minidom::element::Element = svg_el
         .get_child_mut("g", minidom::NSChoice::Any)
@@ -147,11 +156,11 @@ pub fn inline_math_to_svg(preamble: &str, math: &str) -> Result<InlineMathSvg, L
 
     let y: f64 = y_str.parse().map_err(|_| bad_svg())?;
 
-    let baseline_pt = y + 0.5;
+    let baseline_em = (y + 0.5) / 10.0;
     Ok(InlineMathSvg {
         svg: String::from(&svg_el),
-        baseline_pt,
-        height_pt,
+        baseline_em,
+        height_em,
     })
 }
 
@@ -172,19 +181,24 @@ pub fn display_math_to_svg(preamble: &str, math: &str) -> Result<DisplayMathSvg,
 
     let bad_svg = || LatexToSvgError::BadSvg;
 
-    let mut svg_el: minidom::Element = svg.parse().map_err(|_| bad_svg())?;
+    let svg_el: minidom::Element = svg.parse().map_err(|_| bad_svg())?;
+    let (svg_el, _) = svg_height_to_em(svg_el)?;
 
-    let height_attr = svg_el.attr("height").ok_or(bad_svg())?;
-    let height_pt: f64 = height_attr
-        .strip_suffix("pt")
-        .ok_or(bad_svg())?
-        .parse()
-        .map_err(|_| bad_svg())?;
+    Ok(DisplayMathSvg(String::from(&svg_el)))
+}
 
-    let height_em = height_pt / 10.0;
-    svg_el.set_attr("height", format!("{height_em}em"));
-    svg_el.set_attr("width", format!("100%"));
-    svg_el.set_attr("shape-rendering", format!("geometricPrecision"));
+pub fn mathpar_math_to_svg(preamble: &str, math: &str) -> Result<DisplayMathSvg, LatexToSvgError> {
+    let wrapped_math = formatdoc! {r#"
+        \begin{{mathpar}}
+            {math}
+        \end{{mathpar}}
+    "#};
+    let svg = latex_to_svg(preamble, &wrapped_math)?;
+
+    let bad_svg = || LatexToSvgError::BadSvg;
+
+    let svg_el: minidom::Element = svg.parse().map_err(|_| bad_svg())?;
+    let (svg_el, _) = svg_height_to_em(svg_el)?;
 
     Ok(DisplayMathSvg(String::from(&svg_el)))
 }
@@ -192,4 +206,5 @@ pub fn display_math_to_svg(preamble: &str, math: &str) -> Result<DisplayMathSvg,
 #[test]
 fn test_display_math_to_svg() {
     display_math_to_svg("", "5 + 3 + N").unwrap();
+    mathpar_math_to_svg("\\usepackage{mathpartir}", "5 + 3 + N").unwrap();
 }

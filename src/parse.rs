@@ -305,27 +305,21 @@ pub fn text_token(i: &str) -> Result<TextToken> {
     Ok((i, TextToken(consumed_slice(before, i))))
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct InlineMath<'a>(&'a str);
-
-pub fn inline_math(i: &str) -> Result<InlineMath> {
+pub fn inline_math(i: &str) -> Result<Math> {
     let (i, _) = char('$')(i)?;
     let (i, math) = take_while(|c| c != '$')(i)?;
     let (i, _) = char('$')(i)?;
-    Ok((i, InlineMath(math)))
+    Ok((i, Math::Inline(math)))
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct DisplayMath<'a>(&'a str);
-
-pub fn display_math(i: &str) -> Result<DisplayMath> {
+pub fn display_math(i: &str) -> Result<Math> {
     let (i, content) = raw_env("equation")(i)?;
-    Ok((i, DisplayMath(content.0)))
+    Ok((i, Math::Display(content.0)))
 }
 
-pub fn mathpar(i: &str) -> Result<ParagraphPart> {
+pub fn mathpar(i: &str) -> Result<Math> {
     let (i, content) = raw_env("mathpar")(i)?;
-    Ok((i, ParagraphPart::Mathpar(content.0)))
+    Ok((i, Math::Mathpar(content.0)))
 }
 
 pub fn label_value(i: &str) -> Result<&str> {
@@ -400,14 +394,6 @@ pub fn paragraph<'a>(i: &'a str) -> Result<Paragraph<'a>> {
         let (i, tok) = text_token(i)?;
         Ok((i, ParagraphPart::TextToken(tok.0)))
     };
-    let inline_math = |i: &'a str| {
-        let (i, inl_math) = inline_math(i)?;
-        Ok((i, ParagraphPart::InlineMath(inl_math.0)))
-    };
-    let display_math = |i: &'a str| {
-        let (i, disp_math) = display_math(i)?;
-        Ok((i, ParagraphPart::DisplayMath(disp_math.0)))
-    };
     let ref_command = |i: &'a str| {
         let (i, r) = ref_command(i)?;
         Ok((i, ParagraphPart::Ref(r.0)))
@@ -420,9 +406,9 @@ pub fn paragraph<'a>(i: &'a str) -> Result<Paragraph<'a>> {
     let non_ws_part = |i: &'a str| {
         alt((
             text,
-            inline_math,
-            display_math,
-            mathpar,
+            inline_math.map(ParagraphPart::Math),
+            display_math.map(ParagraphPart::Math),
+            mathpar.map(ParagraphPart::Math),
             ref_command,
             eqref,
             emph,
@@ -478,11 +464,11 @@ fn paragraph_test() {
             InlineWhitespace(" "),
             TextToken("fjfj"),
             InlineWhitespace("  \t "),
-            InlineMath(" 5 = \\mathbb{N}"),
+            Math(crate::ast::Math::Inline(" 5 = \\mathbb{N}")),
             InlineWhitespace("\n"),
             Ref("123"),
             InlineWhitespace("\n"),
-            DisplayMath("k = 5"),
+            Math(crate::ast::Math::Display("k = 5")),
         ]
     );
 }
