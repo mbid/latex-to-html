@@ -44,13 +44,35 @@ fn write_paragraph(out: &mut impl Write, preamble: &str, p: &Paragraph) -> Resul
             Ref(_) => {}
             Eqref(_) => {}
             Emph(paragraph) => {
-                write!(out, "<emph>\n")?;
+                write!(out, "<emph>")?;
                 write_paragraph(out, preamble, paragraph)?;
                 write!(out, "</emph>\n")?;
             }
             Comment(_) => {}
             Label(_) => {}
             Qed => {}
+            Itemize(items) => {
+                write!(out, "<ul>\n")?;
+                for item in items {
+                    write!(out, "<li>\n")?;
+                    for paragraph in item {
+                        write_paragraph(out, preamble, paragraph)?;
+                    }
+                    write!(out, "</li>\n")?;
+                }
+                write!(out, "</ul>\n")?;
+            }
+            Enumerate(items) => {
+                write!(out, "<ol>\n")?;
+                for item in items {
+                    write!(out, "<li>\n")?;
+                    for paragraph in item {
+                        write_paragraph(out, preamble, paragraph)?;
+                    }
+                    write!(out, "</li>\n")?;
+                }
+                write!(out, "</ol>\n")?;
+            }
         }
     }
 

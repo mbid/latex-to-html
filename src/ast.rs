@@ -10,6 +10,8 @@ pub enum ParagraphPart<'a> {
     Comment(&'a str),
     Label(&'a str),
     Qed,
+    Enumerate(Vec<Vec<Paragraph<'a>>>),
+    Itemize(Vec<Vec<Paragraph<'a>>>),
 }
 
 pub type Paragraph<'a> = Vec<ParagraphPart<'a>>;

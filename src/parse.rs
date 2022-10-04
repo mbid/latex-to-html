@@ -2,7 +2,7 @@ use nom::branch::alt;
 use nom::bytes::complete::{tag, take_while, take_while1};
 use nom::character::complete::{char, none_of, one_of};
 use nom::combinator::{cut, opt};
-use nom::multi::{count, many0};
+use nom::multi::{count, many0, many1};
 use nom::sequence::{pair, tuple};
 use nom::{IResult, Parser};
 
@@ -335,12 +335,27 @@ pub fn eqref(i: &str) -> Result<ParagraphPart> {
     Ok((i, ParagraphPart::Eqref(val)))
 }
 
+pub fn list_item(i: &str) -> Result<Vec<Paragraph>> {
+    let (i, _) = command_no_args("item")(i)?;
+    let (i, _) = inline_ws(i)?;
+    many1(paragraph)(i)
+}
+
+pub fn itemize(i: &str) -> Result<ParagraphPart> {
+    let (i, items) = env("itemize", intersperse0(list_item, any_ws))(i)?;
+    Ok((i, ParagraphPart::Itemize(items)))
+}
+
+pub fn enumerate(i: &str) -> Result<ParagraphPart> {
+    let (i, items) = env("enumerate", intersperse0(list_item, any_ws))(i)?;
+    Ok((i, ParagraphPart::Enumerate(items)))
+}
+
 pub fn paragraph<'a>(i: &'a str) -> Result<Paragraph<'a>> {
     let ws_part = |i: &'a str| {
         let (i, ws) = inline_ws(i)?;
         Ok((i, ParagraphPart::InlineWhitespace(ws.0)))
     };
-
     let text = |i: &'a str| {
         let (i, tok) = text_token(i)?;
         Ok((i, ParagraphPart::TextToken(tok.0)))
@@ -373,6 +388,8 @@ pub fn paragraph<'a>(i: &'a str) -> Result<Paragraph<'a>> {
             comment,
             paragraph_label,
             paragraph_qed,
+            itemize,
+            enumerate,
         ))(i)
     };
 
