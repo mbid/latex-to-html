@@ -1,13 +1,23 @@
 use crate::ast::*;
 use crate::math_svg::*;
 use indoc::writedoc;
-use std::fmt::{Result, Write};
+use std::fmt::{Display, Formatter, Result, Write};
 use std::write;
 
-fn write_svg_src_attr(out: &mut impl Write, svg: &str) -> Result {
-    let base64_src = base64::encode(svg.as_bytes());
-    write!(out, "data:image/svg+xml;base64,{base64_src}")?;
-    Ok(())
+struct DisplayFn<F: Fn(&mut Formatter) -> Result>(F);
+
+impl<F: Fn(&mut Formatter) -> Result> Display for DisplayFn<F> {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        self.0(f)
+    }
+}
+
+fn display_svg_src_attr(svg: &str) -> impl '_ + Display {
+    DisplayFn(|out: &mut Formatter| {
+        let base64_src = base64::encode(svg.as_bytes());
+        write!(out, "data:image/svg+xml;base64,{base64_src}")?;
+        Ok(())
+    })
 }
 
 fn write_paragraph(out: &mut impl Write, preamble: &str, p: &Paragraph) -> Result {
@@ -22,8 +32,7 @@ fn write_paragraph(out: &mut impl Write, preamble: &str, p: &Paragraph) -> Resul
                     baseline_pt,
                     height_pt,
                 } = inline_math_to_svg(preamble, math).unwrap();
-                let mut img_src = String::new();
-                write_svg_src_attr(&mut img_src, &svg).unwrap();
+                let img_src = display_svg_src_attr(&svg);
                 let top_em = (height_pt - baseline_pt) / 10.0;
                 writedoc! {out, "
                     <img class=\"inline-formula\"
@@ -33,14 +42,14 @@ fn write_paragraph(out: &mut impl Write, preamble: &str, p: &Paragraph) -> Resul
             }
             DisplayMath(math) => {
                 let DisplayMathSvg(svg) = display_math_to_svg(preamble, math).unwrap();
-                let mut img_src = String::new();
-                write_svg_src_attr(&mut img_src, &svg).unwrap();
+                let img_src = display_svg_src_attr(&svg);
                 writedoc! {out, "
                     <img class=\"inline-formula\"
                         style=\"display: block; margin: auto; margin-top: 0.5em; margin-bottom:0.5em\"
                         src=\"{img_src}\">
                 "}?;
             }
+            Mathpar(_) => {}
             Ref(_) => {}
             Eqref(_) => {}
             Emph(paragraph) => {
@@ -73,6 +82,7 @@ fn write_paragraph(out: &mut impl Write, preamble: &str, p: &Paragraph) -> Resul
                 }
                 write!(out, "</ol>\n")?;
             }
+            Todo => (),
         }
     }
 
@@ -145,6 +155,30 @@ pub fn write_document(out: &mut impl Write, doc: &Document) -> Result {
             }
             Lemma(ps) => {
                 write!(out, "<h4>Lemma</h4>\n")?;
+                for p in ps {
+                    write!(out, "<p>\n")?;
+                    write_paragraph(out, preamble, p)?;
+                    write!(out, "<p>\n")?;
+                }
+            }
+            Remark(ps) => {
+                write!(out, "<h4>Remark</h4>\n")?;
+                for p in ps {
+                    write!(out, "<p>\n")?;
+                    write_paragraph(out, preamble, p)?;
+                    write!(out, "<p>\n")?;
+                }
+            }
+            Corollary(ps) => {
+                write!(out, "<h4>Corollary</h4>\n")?;
+                for p in ps {
+                    write!(out, "<p>\n")?;
+                    write_paragraph(out, preamble, p)?;
+                    write!(out, "<p>\n")?;
+                }
+            }
+            Theorem(ps) => {
+                write!(out, "<h4>Theorem</h4>\n")?;
                 for p in ps {
                     write!(out, "<p>\n")?;
                     write_paragraph(out, preamble, p)?;

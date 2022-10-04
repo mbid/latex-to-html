@@ -159,6 +159,36 @@ pub fn command_with_opts<'a, Opts, Args>(
     }
 }
 
+pub fn raw_command_arg(i: &str) -> Result<&str> {
+    let before = i;
+    let mut nesting = 0;
+    let mut it = i.chars();
+    loop {
+        match it.clone().next() {
+            None => break,
+            Some('{') => {
+                nesting += 1;
+            }
+            Some('}') => {
+                if nesting == 0 {
+                    break;
+                } else {
+                    nesting -= 1;
+                }
+            }
+            Some(_) => (),
+        }
+        it.next();
+    }
+
+    let i = it.as_str();
+    Ok((i, consumed_slice(before, i)))
+}
+
+pub fn raw_command<'a>(name: &'static str) -> impl FnMut(&'a str) -> Result<'a, &'a str> {
+    move |i: &'a str| command(name, raw_command_arg)(i)
+}
+
 #[test]
 fn test_command() {
     assert_eq!(command("asdf", tag(""))("\\asdf{}"), Ok(("", "")));
@@ -293,6 +323,11 @@ pub fn display_math(i: &str) -> Result<DisplayMath> {
     Ok((i, DisplayMath(content.0)))
 }
 
+pub fn mathpar(i: &str) -> Result<ParagraphPart> {
+    let (i, content) = raw_env("mathpar")(i)?;
+    Ok((i, ParagraphPart::Mathpar(content.0)))
+}
+
 pub fn label_value(i: &str) -> Result<&str> {
     take_while1(|c| c != '{' && c != '}')(i)
 }
@@ -351,6 +386,11 @@ pub fn enumerate(i: &str) -> Result<ParagraphPart> {
     Ok((i, ParagraphPart::Enumerate(items)))
 }
 
+pub fn todo(i: &str) -> Result<ParagraphPart> {
+    let (i, _) = raw_command("todo")(i)?;
+    Ok((i, ParagraphPart::Todo))
+}
+
 pub fn paragraph<'a>(i: &'a str) -> Result<Paragraph<'a>> {
     let ws_part = |i: &'a str| {
         let (i, ws) = inline_ws(i)?;
@@ -382,6 +422,7 @@ pub fn paragraph<'a>(i: &'a str) -> Result<Paragraph<'a>> {
             text,
             inline_math,
             display_math,
+            mathpar,
             ref_command,
             eqref,
             emph,
@@ -390,6 +431,7 @@ pub fn paragraph<'a>(i: &'a str) -> Result<Paragraph<'a>> {
             paragraph_qed,
             itemize,
             enumerate,
+            todo,
         ))(i)
     };
 
@@ -541,6 +583,24 @@ pub fn lemma<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
     env("lemma", paragraphs0).map(DocumentPart::Lemma).parse(i)
 }
 
+pub fn remark<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
+    env("remark", paragraphs0)
+        .map(DocumentPart::Remark)
+        .parse(i)
+}
+
+pub fn corollary<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
+    env("corollary", paragraphs0)
+        .map(DocumentPart::Corollary)
+        .parse(i)
+}
+
+pub fn theorem<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
+    env("theorem", paragraphs0)
+        .map(DocumentPart::Theorem)
+        .parse(i)
+}
+
 pub fn proof<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
     env("proof", paragraphs0).map(DocumentPart::Proof).parse(i)
 }
@@ -560,6 +620,9 @@ pub fn document_part<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
         proposition,
         definition,
         lemma,
+        remark,
+        corollary,
+        theorem,
         proof,
     ))(i)?;
     Ok((i, part))
