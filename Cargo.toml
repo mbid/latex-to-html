@@ -5,6 +5,8 @@ edition = "2021"
 
 [dependencies]
 nom = "7"
-
-[dev-dependencies]
 indoc = "1"
+tempdir = "0"
+minidom = "0"
+minidom_writer = "1"
+base64 = "0"
