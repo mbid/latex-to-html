@@ -61,46 +61,44 @@ fn create_math_svg_files<'a>(root: &'a Path, doc: &'a Document) -> HashMap<Math<
 
     let mut result = HashMap::new();
 
-    doc.parts.iter().for_each(|part| {
-        part.for_each_math(|math| {
-            if result.contains_key(&math) {
-                return;
+    doc.for_each_math(|math| {
+        if result.contains_key(&math) {
+            return;
+        }
+
+        let mut info = MathSvgInfo {
+            y_em_offset: None,
+            path: PathBuf::from(format!("{}", display_svg_math_path(doc.preamble, math))),
+        };
+        let path = root.join(&info.path);
+        if path.exists() {
+            fs::remove_file(&path).unwrap();
+        }
+
+        use Math::*;
+        let svg = match math {
+            Inline(src) => {
+                let InlineMathSvg {
+                    svg,
+                    height_em,
+                    baseline_em,
+                } = inline_math_to_svg(doc.preamble, src).unwrap();
+                info.y_em_offset = Some(height_em - baseline_em);
+                svg
             }
-
-            let mut info = MathSvgInfo {
-                y_em_offset: None,
-                path: PathBuf::from(format!("{}", display_svg_math_path(doc.preamble, math))),
-            };
-            let path = root.join(&info.path);
-            if path.exists() {
-                fs::remove_file(&path).unwrap();
+            Display(src) => {
+                let DisplayMathSvg(svg) = display_math_to_svg(doc.preamble, src).unwrap();
+                svg
             }
+            Mathpar(src) => {
+                let DisplayMathSvg(svg) = mathpar_math_to_svg(doc.preamble, src).unwrap();
+                svg
+            }
+        };
 
-            use Math::*;
-            let svg = match math {
-                Inline(src) => {
-                    let InlineMathSvg {
-                        svg,
-                        height_em,
-                        baseline_em,
-                    } = inline_math_to_svg(doc.preamble, src).unwrap();
-                    info.y_em_offset = Some(height_em - baseline_em);
-                    svg
-                }
-                Display(src) => {
-                    let DisplayMathSvg(svg) = display_math_to_svg(doc.preamble, src).unwrap();
-                    svg
-                }
-                Mathpar(src) => {
-                    let DisplayMathSvg(svg) = mathpar_math_to_svg(doc.preamble, src).unwrap();
-                    svg
-                }
-            };
+        fs::write(&path, svg).unwrap();
 
-            fs::write(&path, svg).unwrap();
-
-            result.insert(math, info);
-        })
+        result.insert(math, info);
     });
 
     result
@@ -193,7 +191,7 @@ pub fn display_head(title: impl Display) -> impl Display {
     })
 }
 
-pub fn write_index(out: &mut impl Write, preamble: &str, parts: &[DocumentPart]) -> Result {
+pub fn write_index(out: &mut impl Write, doc: &Document) -> Result {
     let head = display_head("Render experiment");
     writedoc! {out, r#"
         <!DOCTYPE html>
@@ -202,7 +200,10 @@ pub fn write_index(out: &mut impl Write, preamble: &str, parts: &[DocumentPart])
         <body>
     "#}?;
 
-    for part in parts.iter() {
+    let preamble = &doc.preamble;
+    let config = &doc.config;
+
+    for part in doc.parts.iter() {
         use DocumentPart::*;
         match part {
             FreeParagraph(p) => {
@@ -231,6 +232,29 @@ pub fn write_index(out: &mut impl Write, preamble: &str, parts: &[DocumentPart])
                     write!(out, "{}", display_paragraph(preamble, p))?;
                     write!(out, "<p>\n")?;
                 }
+            }
+            TheoremLike(theorem_like) => {
+                let theorem_like_config = config
+                    .theorem_like_configs
+                    .iter()
+                    .find(|config| config.tag == theorem_like.tag)
+                    .unwrap();
+                let name = display_paragraph(preamble, &theorem_like_config.name);
+                writedoc! {out, "
+                    <div>
+                    <h4>
+                    {name}
+                    </h4>
+                "}?;
+                for parag in theorem_like.content.iter() {
+                    let parag_displ = display_paragraph(preamble, parag);
+                    writedoc! {out, "
+                        {parag_displ}
+                    "}?;
+                }
+                writedoc! {out, "
+                    </div>
+                "}?;
             }
             Proposition(ps) => {
                 write!(out, "<h4>Proposition</h4>\n")?;
@@ -334,7 +358,7 @@ pub fn emit(root: &Path, doc: &Document) {
     fs::create_dir_all(root).unwrap();
 
     let mut index_src = String::new();
-    write_index(&mut index_src, &doc.preamble, &doc.parts).unwrap();
+    write_index(&mut index_src, &doc).unwrap();
 
     let index_path = root.join("index.html");
     let mut index_file = std::fs::OpenOptions::new()

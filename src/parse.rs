@@ -204,6 +204,25 @@ fn test_command() {
     );
 }
 
+pub fn dyn_env<'a, T, O>(
+    mut tag_parser: impl FnMut(&'a str) -> Result<'a, T>,
+    mut content_parser: impl FnMut(&'a str) -> Result<'a, O>,
+) -> impl FnMut(&'a str) -> Result<'a, O> {
+    move |i: &'a str| {
+        let (i, _) = command("begin", &mut tag_parser)(i)?;
+        cut(|i: &'a str| {
+            let (i, _) = inline_ws(i)?;
+
+            let (i, content) = content_parser(i)?;
+
+            let (i, _) = inline_ws(i)?;
+            let (i, _) = command("end", &mut tag_parser)(i)?;
+
+            Ok((i, content))
+        })(i)
+    }
+}
+
 pub fn env<'a, O>(
     name: &'static str,
     mut content_parser: impl FnMut(&'a str) -> Result<'a, O>,
@@ -554,9 +573,14 @@ pub fn label<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
 }
 
 pub fn proposition<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
-    env("proposition", paragraphs0)
-        .map(DocumentPart::Proposition)
-        .parse(i)
+    let (i, content) = env("proposition", paragraphs0)(i)?;
+    Ok((
+        i,
+        DocumentPart::TheoremLike(TheoremLike {
+            tag: "proposition",
+            content,
+        }),
+    ))
 }
 
 pub fn definition<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
@@ -582,17 +606,54 @@ pub fn corollary<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
 }
 
 pub fn theorem<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
-    env("theorem", paragraphs0)
-        .map(DocumentPart::Theorem)
-        .parse(i)
+    let (i, content) = env("theorem", paragraphs0)(i)?;
+    Ok((
+        i,
+        DocumentPart::TheoremLike(TheoremLike {
+            tag: "theorem",
+            content,
+        }),
+    ))
+}
+
+pub fn theorem_like<'a, 'b>(
+    configs: &'b [TheoremLikeConfig<'b>],
+    i: &'a str,
+) -> Result<'a, DocumentPart<'a>> {
+    let (first, tail) = match configs {
+        [] => {
+            return Err(nom::Err::Error(Error::new(i, nom::error::ErrorKind::IsNot)));
+        }
+        [first, tail @ ..] => (first, tail),
+    };
+
+    let head_parser = |i: &'a str| {
+        let (i, content) = dyn_env(tag(first.tag), paragraphs0)(i)?;
+        Ok((
+            i,
+            DocumentPart::TheoremLike(TheoremLike {
+                tag: "theorem",
+                content,
+            }),
+        ))
+    };
+
+    let tail_parser: Box<dyn Fn(&'a str) -> Result<'a, DocumentPart<'a>>> =
+        Box::new(move |i| theorem_like(tail, i));
+
+    alt((head_parser, tail_parser))(i)
 }
 
 pub fn proof<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
     env("proof", paragraphs0).map(DocumentPart::Proof).parse(i)
 }
 
-pub fn document_part<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
+pub fn document_part<'a, 'b>(
+    config: &'b DocumentConfig<'a>,
+    i: &'a str,
+) -> Result<'a, DocumentPart<'a>> {
     let free_paragraph = paragraph.map(DocumentPart::FreeParagraph);
+    let theorem_like = |i| theorem_like(&config.theorem_like_configs, i);
     let (i, part) = alt((
         free_paragraph,
         title,
@@ -603,12 +664,7 @@ pub fn document_part<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
         subsection,
         abstract_env,
         label,
-        proposition,
-        definition,
-        lemma,
-        remark,
-        corollary,
-        theorem,
+        theorem_like,
         proof,
     ))(i)?;
     Ok((i, part))
@@ -627,10 +683,19 @@ pub fn document<'a>(i: &'a str) -> Result<Document<'a>> {
     let (i, _) = any_ws(i)?;
     let (i, _) = documentclass(i)?;
     let (i, (preamble, _)) = take_until(command("begin", tag("document")))(i)?;
+    let config = DocumentConfig::default();
     let (i, _) = any_ws(i)?;
+    let document_part = |i: &'a str| document_part(&config, i);
     let (i, parts) = intersperse0(document_part, any_ws)(i)?;
     let (i, _) = any_ws(i)?;
     let (i, _) = command("end", tag("document"))(i)?;
     let (i, _) = any_ws(i)?;
-    Ok((i, Document { preamble, parts }))
+    Ok((
+        i,
+        Document {
+            config,
+            preamble,
+            parts,
+        },
+    ))
 }

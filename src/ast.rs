@@ -24,6 +24,18 @@ pub enum ParagraphPart<'a> {
 pub type Paragraph<'a> = Vec<ParagraphPart<'a>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TheoremLikeConfig<'a> {
+    pub tag: &'a str,
+    pub name: Paragraph<'a>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TheoremLike<'a> {
+    pub tag: &'a str,
+    pub content: Vec<Paragraph<'a>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DocumentPart<'a> {
     FreeParagraph(Paragraph<'a>),
     Title(Paragraph<'a>),
@@ -33,6 +45,7 @@ pub enum DocumentPart<'a> {
     Section(Paragraph<'a>),
     Subsection(Paragraph<'a>),
     Abstract(Vec<Paragraph<'a>>),
+    TheoremLike(TheoremLike<'a>),
     Proposition(Vec<Paragraph<'a>>),
     Definition(Vec<Paragraph<'a>>),
     Lemma(Vec<Paragraph<'a>>),
@@ -44,9 +57,48 @@ pub enum DocumentPart<'a> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DocumentConfig<'a> {
+    pub theorem_like_configs: Vec<TheoremLikeConfig<'a>>,
+}
+
+impl Default for DocumentConfig<'static> {
+    fn default() -> Self {
+        DocumentConfig {
+            theorem_like_configs: vec![
+                TheoremLikeConfig {
+                    tag: "theorem",
+                    name: vec![ParagraphPart::TextToken("Theorem")],
+                },
+                TheoremLikeConfig {
+                    tag: "proposition",
+                    name: vec![ParagraphPart::TextToken("Proposition")],
+                },
+                TheoremLikeConfig {
+                    tag: "definition",
+                    name: vec![ParagraphPart::TextToken("Definition")],
+                },
+                TheoremLikeConfig {
+                    tag: "lemma",
+                    name: vec![ParagraphPart::TextToken("Lemma")],
+                },
+                TheoremLikeConfig {
+                    tag: "remark",
+                    name: vec![ParagraphPart::TextToken("Remark")],
+                },
+                TheoremLikeConfig {
+                    tag: "corollary",
+                    name: vec![ParagraphPart::TextToken("Corollary")],
+                },
+            ],
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Document<'a> {
     pub preamble: &'a str,
     pub parts: Vec<DocumentPart<'a>>,
+    pub config: DocumentConfig<'a>,
 }
 
 pub trait Syntax {
@@ -123,6 +175,13 @@ impl<'a> Syntax for DocumentPart<'a> {
                     .flatten()
                     .for_each(|part| part.for_each_math(&mut f));
             }
+            TheoremLike(theorem_like) => {
+                theorem_like
+                    .content
+                    .iter()
+                    .flatten()
+                    .for_each(|part| part.for_each_math(&mut f));
+            }
             Proposition(pars) => {
                 pars.iter()
                     .flatten()
@@ -160,5 +219,28 @@ impl<'a> Syntax for DocumentPart<'a> {
             }
             Label(_) => (),
         }
+    }
+}
+
+impl<'a> Syntax for TheoremLikeConfig<'a> {
+    fn for_each_math<'b>(self: &'b Self, mut f: impl FnMut(Math<'b>) -> ()) {
+        self.name.iter().for_each(|part| part.for_each_math(&mut f));
+    }
+}
+
+impl<'a> Syntax for DocumentConfig<'a> {
+    fn for_each_math<'b>(self: &'b Self, mut f: impl FnMut(Math<'b>) -> ()) {
+        self.theorem_like_configs
+            .iter()
+            .for_each(|c| c.for_each_math(&mut f));
+    }
+}
+
+impl<'a> Syntax for Document<'a> {
+    fn for_each_math<'b>(self: &'b Self, mut f: impl FnMut(Math<'b>) -> ()) {
+        self.parts
+            .iter()
+            .for_each(|part| part.for_each_math(&mut f));
+        self.config.for_each_math(&mut f);
     }
 }
