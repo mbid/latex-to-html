@@ -580,11 +580,11 @@ pub fn theorem_like<'a, 'b>(
         let (i, content) = paragraphs0(i)?;
         Ok((
             i,
-            DocumentPart::TheoremLike(TheoremLike {
+            DocumentPart::TheoremLike {
                 tag: first.tag,
                 label,
                 content,
-            }),
+            },
         ))
     };
     let head_parser = |i: &'a str| {

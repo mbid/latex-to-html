@@ -121,7 +121,7 @@ fn display_math<'a>(preamble: &'a str, math: Math<'a>) -> impl 'a + Display {
 struct EmitData<'a> {
     preamble: &'a str,
     // The numbering assigned to theorem-like document parts.
-    theorem_like_numbers: HashMap<*const TheoremLike<'a>, usize>,
+    theorem_like_numbers: HashMap<*const DocumentPart<'a>, usize>,
     // The text by which references should refer to what they are referencing.
     label_names: HashMap<&'a str, String>,
 }
@@ -306,13 +306,11 @@ fn write_index(out: &mut impl Write, doc: &Document, data: &EmitData) -> Result 
                     write!(out, "<p>\n")?;
                 }
             }
-            TheoremLike(
-                theorem_like @ crate::ast::TheoremLike {
-                    tag,
-                    content,
-                    label,
-                },
-            ) => {
+            TheoremLike {
+                tag,
+                content,
+                label,
+            } => {
                 let theorem_like_config = config
                     .theorem_like_configs
                     .iter()
@@ -321,7 +319,7 @@ fn write_index(out: &mut impl Write, doc: &Document, data: &EmitData) -> Result 
                 let label = display_label_id_attr(*label);
                 let number = data
                     .theorem_like_numbers
-                    .get(&std::ptr::addr_of!(*theorem_like))
+                    .get(&std::ptr::addr_of!(*part))
                     .copied();
                 let header = display_theorem_header(data, &theorem_like_config.name, number);
                 writedoc! {out, "
@@ -390,12 +388,12 @@ pub fn display_svg_style<'a>(infos: &'a HashMap<Math<'a>, MathSvgInfo>) -> impl 
 
 pub fn assign_theorem_like_numbers<'a>(
     doc: &Document<'a>,
-) -> HashMap<*const TheoremLike<'a>, usize> {
-    let mut map: HashMap<*const TheoremLike<'a>, usize> = HashMap::new();
+) -> HashMap<*const DocumentPart<'a>, usize> {
+    let mut map: HashMap<*const DocumentPart<'a>, usize> = HashMap::new();
     let mut next = 1;
     for part in doc.parts.iter() {
-        if let DocumentPart::TheoremLike(theorem_like) = part {
-            map.insert(theorem_like, next);
+        if let DocumentPart::TheoremLike { .. } = part {
+            map.insert(part, next);
             next += 1;
         }
     }
@@ -404,20 +402,15 @@ pub fn assign_theorem_like_numbers<'a>(
 
 pub fn assign_label_names<'a>(
     doc: &Document<'a>,
-    numbers: &HashMap<*const TheoremLike<'a>, usize>,
+    numbers: &HashMap<*const DocumentPart, usize>,
 ) -> HashMap<&'a str, String> {
     let mut names = HashMap::new();
     for part in doc.parts.iter() {
-        if let DocumentPart::TheoremLike(
-            theorem_like @ TheoremLike {
-                label: Some(label), ..
-            },
-        ) = part
+        if let DocumentPart::TheoremLike {
+            label: Some(label), ..
+        } = part
         {
-            let number = numbers
-                .get(&std::ptr::addr_of!(*theorem_like))
-                .copied()
-                .unwrap();
+            let number = numbers.get(&std::ptr::addr_of!(*part)).copied().unwrap();
             names.insert(*label, number.to_string());
         }
     }
