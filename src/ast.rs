@@ -14,7 +14,6 @@ pub enum ParagraphPart<'a> {
     Math(Math<'a>),
     Ref(&'a str),
     Emph(Paragraph<'a>),
-    Comment(&'a str),
     Label(&'a str),
     Qed,
     Enumerate(Vec<Vec<Paragraph<'a>>>),
@@ -120,7 +119,6 @@ fn for_each_math_paragraph_part_impl<'a>(
                 for_each_math_paragraph_part_impl(part, f);
             }
         }
-        Comment(_) => (),
         Label(_) => (),
         Qed => (),
         Enumerate(items) | Itemize(items) => {

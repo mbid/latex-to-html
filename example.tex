@@ -1,7 +1,6 @@
 \documentclass[a4paper]{article}
 
 \usepackage[utf8]{inputenc}
-% \usepackage[round]{natbib}
 \usepackage[english]{babel}
 \usepackage{amsfonts}
 \usepackage{amsmath}
@@ -12,7 +11,6 @@
 \usepackage{hyperref}
 \usepackage{tikz-cd}
 \usepackage{mathtools}
-% \usepackage{enumitem}
 \usepackage{color}
 \usepackage{mathpartir}
 
@@ -50,11 +48,9 @@
   The paper is accompanied by a tool that translates eqlog theories to specialized rust code.
 \end{abstract}
 
-\section{
-  Essentially algebraic
-}
+\section{Essentially algebraic theories and free models}
 
-In this section we recall the notion of \emph{ (finite) essentially algebraic theory } and give a brief proof sketch of the existence of free models.
+In this section we recall the notion of \emph{(finite) essentially algebraic theory} and give a brief proof sketch of the existence of free models.
 Our proof proceeds by associating to each axiom $T$ of an essentially algebraic theory an epimorphic morphism $[T]$ in the category of structures for the signature of the theory.
 We show that the models of the theory are precisely the orthogonal structures.
 From this it follows via the orthogonal-reflection construction that a free model exists over every structure.
@@ -94,7 +90,7 @@ Fix a cocomplete category $\mathcal{C}$ for the remainder of Section \ref{subsec
 
 \begin{definition}
   \label{def:flub}
-  A class $M$ of morphisms is called \emph{flub} if $M^\pitchfork = M^\perp$.
+  A class $M$ of morphisms is called \emph{flub} \todo{placeholder} if $M^\pitchfork = M^\perp$.
 \end{definition}
 
 One of the main sources of flub sets is the following Lemma:
@@ -111,9 +107,1191 @@ It lets us reduce questions about orthogonality classes to flub injectivity clas
 	Then there exists a superclass $N \supseteq M$ such that $N$ is flub and $N^\pitchfork = M^\perp$.
   If $M$ is a set, then $N$ can be chosen as set.
 \end{proposition}
+\begin{proof}
+  Let $f : A \rightarrow B$ be a morphism in $M$.
+  Then for each object $X$, the data of a single map $a : A \rightarrow X$ and two maps $b_1, b_2 : B \rightarrow X$ such that
+  \begin{equation}
+    \begin{tikzcd}
+      A \arrow[r, "a"] \arrow[d, "f"'] & X \\
+      B \arrow[ur, "b_i"'] &
+    \end{tikzcd}
+  \end{equation}
+  commutes for $i \in \{1, 2\}$ is in bijective correspondence to a map $\langle b_1, b_2 \rangle : B \amalg_A B \rightarrow X$.
+  Let
+  \begin{equation}
+    f_\mathrm{eq} : B \amalg_A B \rightarrow B.
+  \end{equation}
+  be the canonical map that collapses the two copies of $B$ into one.
+  Then $b_1 = b_2$ if and only if there exists a map $b$ such that
+  \begin{equation}
+    \begin{tikzcd}
+      B \amalg_A B \arrow[r, "{\langle b_1, b_2\rangle}"] \arrow[d, "f_\mathrm{eq}"'] & X \\
+      B \arrow[ur, "b"'] &
+    \end{tikzcd}
+  \end{equation}
+  commutes.
+  The map $f_\mathrm{eq}$ is an epimorphism.
+  Thus if $b$ exists, then it exists uniquely, and $b = b_1 = b_2$.
+  It follows that $X$ is orthogonal to $f$ if and only if $f$ is injective to both $f$ and $f_\mathrm{eq}$.
+  The desired set $N$ can thus be defined by $N = M \cup \{ f_\mathrm{eq} \mid f \in M \}$.
+\end{proof}
 
-% \bibliographystyle{abbrvnat}
-% \setcitestyle{authoryear,open={(},close={)}}
-% \bibliography{main}
+\begin{definition}
+  Let $M$ be a class of morphisms.
+  A \emph{relative $M$-complex} is (isomorphic to) a transfinite composition of pushouts of morphisms in $M$.
+  The class of relative $M$-complexes is denoted by $\mathrm{Cell}(M)$.
+\end{definition}
+
+\begin{proposition}
+  Let $M$ be a class of morphisms.
+  Relative $M$-cell complexes satisfy the following closure properties:
+  \begin{enumerate}
+    \item
+      $\mathrm{Cell}(M)$ contains all isomorphisms.
+    \item
+      $M \subseteq \mathrm{Cell}(M)$.
+    \item
+      \label{itm:cell-idempotent}
+      $\mathrm{Cell}(\mathrm{Cell}(M)) = \mathrm{Cell}(M)$.
+    \item
+      \label{itm:cell-coproducts}
+      $\mathrm{Cell}(M)$ is closed under coproducts.
+    \item
+      \label{itm:cell-injective}
+      $\mathrm{Cell}(M)^\pitchfork = M^\pitchfork$.
+    \item
+      $\mathrm{Cell}(M)^\perp = M^\perp$.
+      \qed
+  \end{enumerate}
+\end{proposition}
+\begin{proof}
+  We show \ref{itm:cell-idempotent}, \ref{itm:cell-coproducts} and \ref{itm:cell-injective}, and leave proofs of the other clauses to the interested reader.
+
+  \ref{itm:cell-idempotent}.
+  It suffices to show that $\mathrm{Cell}(M)$ is closed under pushouts and transfinite compositions.
+  Let $f : X \rightarrow Y$ be in $\mathrm{Cell}(M)$, and let $k : X \rightarrow X'$ be an arbitrary map.
+  By definition of $\mathrm{Cell}(M)$, we find a transfinite sequence of morphisms $m_0, m_1, \dots \in M$ and pushout squares square as in the top half of the following diagram such that $f$ is the transfinite composition of the $f_i$:
+  \begin{equation}
+    \begin{tikzcd}
+      A_0 \arrow[r, "m_0"] \arrow[d] & B_0 \arrow[d] & A_1 \arrow[d] \arrow[r, "m_1"] & B_1 \arrow[d] & \dots \\
+      X \arrow[d, "k"'] \arrow[r, "f_0"] & X_1 \arrow[d] \arrow[r, "="] & X_1 \arrow[d] \arrow[r, "f_1"] & X_2 \arrow[d] \arrow[r] & \dots \arrow[r] & Y \arrow[d, "k'"] \\
+      X' \arrow[r, "f'_0"] & X'_1 \arrow[r, "="] & X'_1 \arrow[r, "f'_1"] & X'_2 \arrow[r] & \dots \arrow[r] & Y'
+    \end{tikzcd}
+  \end{equation}
+  Define $f'_0, f'_1, \dots$ for successor ordinals such that the squares in the bottom half are pushouts, and for limit ordinals as transfinite composition of the previous $f'_i$.
+  Because pushouts commute with transfinite composition, it follows that each horizontal rectangle in the bottom half of the diagram is a pushout.
+  In particular, the map $X' \rightarrow Y'$ is a pushout of $f$ along $k$.
+  By the pasting lemma for pushouts, the vertical rectangles with edges $A_i, B_i, X'_i, X'_{i + 1}$ are pushouts.
+  Thus each map $f'_i$ is a pushout of a map in $M$, and $f'$ is the transfinite composition of the $f'_i$.
+
+  For closure of $\mathrm{Cell}(M)$, it suffices to show that a transfinite compomsition of transfinite compositions can be reduced to a single transfinite composition.
+  Thus let $(f_a)_{a \in \alpha}$ be a transfinite sequence of maps indexed by an ordinal $\alpha$ such that for all $a \in \alpha$, the map $f_a$ is the transfinite composition of a sequence $g_{a, b}$ for some ordinal $\beta_a$.
+  Set
+  \begin{equation}
+    \gamma = \beta_0 + \beta_1 + \dots \cong \{ (a, b) \mid a \in \alpha, b \in \beta_a \}
+  \end{equation}
+  where the order is given by
+  \begin{equation}
+    (a_0, b_0) \leq (a_1, b_1) \iff \begin{cases}
+      a_0 \leq a_1 & \text{if } a_0 \neq a_1 \\
+      b_0 \leq b_1 & \text{otherwise}
+    \end{cases}
+  \end{equation}
+  Then $\gamma$ is well-ordered, and the transfinite composition of the $(f_a)_{a \in \alpha}$ can be computed as transfinite composition of $(g_{a, b})_{(a, b) \in \gamma}$.
+
+  \ref{itm:cell-coproducts}.
+  We consider first binary coproducts of maps $f_0 : A_0 \rightarrow B_0$ and $f_1 : A_1 \rightarrow B_1$ in $\mathrm{Cell}(M)$.
+  Consider the following diagram:
+  \begin{equation}
+    \begin{tikzcd}
+      A_0 \arrow[d] \arrow[r, "f_0"] & B_0 \arrow[d] & A_1 \arrow[d] \arrow[r, "f_1"] & B_1 \arrow[d] \\
+      A_0 \amalg A_1 \arrow[r, "f_0 \amalg \mathrm{id}"] & B_0 \amalg A_1 \arrow[r, "="] & B_0 \amalg A_1 \arrow[r, "\mathrm{id} \amalg f_1"] & B_0 \amalg B_1
+    \end{tikzcd}
+  \end{equation}
+  Both squares are pushout squares, and the composition $A_0 \amalg A_1 \rightarrow B_0 \amalg B_1$ equals $f_0 \amalg f_1$.
+  By \ref{itm:cell-idempotent}, it follows that $f_0 \amalg f_1 \in \mathrm{Cell}(M)$.
+  This can be generalized to arbitrary coproducts over potentially infinite sets $I \subseteq \mathrm{Cell}(M)$ by first choosing an ordinal $\alpha \cong I$, and then computing $\coprod I$ as a transfinite composition of a sequence indexed by $\alpha$.
+
+  \ref{itm:cell-injective}
+  The inclusion $M \subseteq \mathrm{Cell}(M)$ immediately implies that every object that is injective to $\mathrm{Cell}(M)$ is also injective to $M$.
+  Conversely, let $X$ be an object and let $N = \{f \in \operatorname{Mor} \mathcal{C} \mid f \pitchfork X \}$.
+  We show that $N$ is closed under pushouts and transfinite composition.
+
+  For pushouts, consider the diagram
+  \begin{equation}
+    \begin{tikzcd} \\
+      A \arrow[r] \arrow[d, "m"'] \arrow[dr, very near end, phantom, "\ulcorner" description] & A' \arrow[d, "m'"] \arrow[r] & X \\
+      B \arrow[r] & B'
+    \end{tikzcd}
+  \end{equation}
+  where $m \in M$ and $a, a'$ are arbitrary maps.
+  Since $m \pitchfork X$, there exists a lift $b : B \rightarrow X$, and then because of the universal property of pushouts the lift extends uniquely to a lift $b' : B' \rightarrow X$ that commutes with $b$.
+  Thus $m' \pitchfork X$.
+\end{proof}
+
+\begin{lemma}
+  \label{lem:factoring-via-cell-complexes}
+  Let $M$ be a class of morphisms.
+  Let $f : X \rightarrow Y$ be a relative $M$-cell complex, and let $g : X \rightarrow Z$ be a map with $Z \in M^\pitchfork$.
+  Then there is a map $h : Y \rightarrow Z$ such that $hf = g$.
+  If furthermore $M$ is flub, then $h$ is unique.
+\end{lemma}
+\begin{proof}
+\end{proof}
+
+\begin{proposition}
+  Let $M$ be flub class of morphisms.
+  Let $f : X \rightarrow Y$ be a relative $M$-cell complex such that $Y \in M^\perp$.
+  Then $f$ is a reflection of $X$ into $M^\pitchfork$.
+\end{proposition}
+\begin{proof}
+  By Lemma \ref{lem:factoring-via-cell-complexes}.
+\end{proof}
+
+\begin{definition}
+  \label{def:finitely-presentable}
+  An object $X$ is \emph{finitely presentable} if the hom-functor $\mathrm{Hom}(X, -) : \mathcal{C} \rightarrow \mathrm{Set}$ preserves filtered colimits.
+\end{definition}
+\todo{Make this explicit maybe.}
+
+\begin{proposition}[Orthogonal-reflection construction]
+  \label{prop:orth-refl-constr-prop}
+  Let $M$ be a flub class of morphisms with finitely presentable domains and codomains.
+  Let
+  \begin{equation}
+    X_0 \xrightarrow{x_0} X_1 \xrightarrow{x_1} \dots
+  \end{equation}
+  be a countable chain of morphisms in $M$ such that the following holds:
+  \begin{enumerate}
+    \item
+      $x_n$ is a relative $M$-cell complex for all $n$.
+    \item
+      \label{itm:m-factorizations-exist}
+      For all $f : A \rightarrow B$ in $M$, $n \geq 0$ and maps $a : A \rightarrow X_n$, there exists a map a map $b : B \rightarrow X_m$ for some $m \geq n$ such that
+      \begin{equation}
+        \begin{tikzcd}
+          A \arrow[rrr, "f"] \arrow[d, "a"'] & & & B \arrow[d, "b"] \\
+          X_n \arrow[r, "x_n"] & X_{n + 1} \arrow[r, "x_{n + 1}"] & \dots \arrow[r, "x_{m - 1}"] & X_m
+        \end{tikzcd}
+      \end{equation}
+      commutes.
+  \end{enumerate}
+  Then the transfinite composition $X_0 \rightarrow \operatorname{colim}_{n \geq 0} X_n$ is a reflection into $M^\pitchfork$.
+\end{proposition}
+\begin{proof}
+  The transfinite composition of the relative $M$-cell complexes $x_n$ is a relative $M$-cell complexes by Lemma \todo{REF}.
+  Thus by Lemma \todo{REF}, it suffices to show that $\bar X = \operatorname{colim}_{n \geq 0}$ is in $M$-injective.
+
+  Let $f : A \rightarrow B$ be in $M$ and let $a : A \rightarrow \bar X$.
+  Because $A$ is finitely presentable, there exists $n$ and $a_n : A \rightarrow X_n$ such that $a$ factors as $A \rightarrow X_n \rightarrow \bar X$.
+  By assumption \ref{itm:m-factorizations-exist}, there exist $m$ and $b_m : B \rightarrow X_m$ that commutes with $f$, $a_n$ and $x_{m - 1} \circ \dots \circ x_n$.
+  Thus if we define $b$ as composition $B \rightarrow X_m \rightarrow \bar X$, then $a = b \circ f$.
+\end{proof}
+
+\begin{proposition}
+  \label{prop:orth-refl-constr-exist}
+  Let $M$ be flub set (not a proper class!) of morphism and let $X$ be an object.
+  Then there exists a chain
+  \begin{equation}
+    X_0 \xrightarrow{x_0} X_1 \xrightarrow{x_1} \dots
+  \end{equation}
+  satisfying the conditions of Proposition \ref{prop:orth-refl-constr-exist} such that $X = X_0$.
+  In particular, $X$ has a reflection in $M^\pitchfork$, which is a reflective subcategory of $\mathcal{C}$.
+\end{proposition}
+\begin{proof}
+  It suffices to construct a relative $M$-cell complexes $X \rightarrow Y$ such that for every $f : A \rightarrow B$ in $M$ and $a : A \rightarrow X$, there exists a commuting diagram
+  \begin{equation}
+    \begin{tikzcd}
+      A \arrow[r, "f"] \arrow[d, "a"'] & B \arrow[d, "b"] \\
+      X \arrow[r] & Y.
+    \end{tikzcd}
+  \end{equation}
+  The required chain can then be obtained by induction.
+
+  Let $I$ be the set of pairs $(f, a)$, where $f : A \rightarrow B$ is a morphism in $M$ and $a : A \rightarrow X$.
+  Note that $I$ is a set because $M$ is a set and $\mathrm{Hom}(A, X)$ is a set for all $A$.
+  We then define $X \rightarrow Y$ by the following pushout diagram:
+  \begin{equation}
+    \begin{tikzcd}
+      \coprod_{(f, a) \in I} \operatorname{dom} f \arrow[r] \arrow[d] \arrow[dr, phantom, very near end, "\ulcorner"] & \coprod_{(f, a) \in I} \operatorname{cod} f \arrow[d] \\
+      X \arrow[r] & Y
+    \end{tikzcd}
+  \end{equation}
+  Here the top map is given by the coproduct of the first projection $f$ for each $(f, a) \in I$, and the top map is given by the second component $a$ for each $(f, a) \in I$.
+\end{proof}
+
+\subsection{Relational and algebraic structures}
+
+\begin{definition}
+  A \emph{relational signature} is given by the following data:
+  \begin{itemize}
+    \item
+      A set $S$ of \emph{sort symbols}.
+    \item
+      A set $R$ of \emph{relation symbols}.
+    \item
+      A map that assigns to each relation symbol $r \in R$ an \emph{arity}
+      \begin{equation}
+        r : s_1 \times \dots \times s_n
+      \end{equation}
+      of sort symbols $s_1, \dots, s_n \in S$ for $n \geq 0$.
+  \end{itemize}
+  
+  An \emph{algebraic signature} is a relational signature $(S, R)$ equipped with a partition $R = P \sqcup F$ of the set of relation symbol into disjoint sets $P$ of \emph{predicate symbols} and $F$ of \emph{function symbols} such that the arity of every function symbol is non-empty.
+  If $f \in F$ is a function symbol, then we write $f : s_1 \times \dots \times \dots s_n \rightarrow s$ if the arity of $f$ as a relation symbol is $f : s_1 \times \dots \times s_n \times s$.
+\end{definition}
+
+\begin{definition}
+  Let $\mathcal{S} = (S, R)$ be a relational signature.
+  A \emph{relational structure} for $\mathcal{S}$ consists of the following data:
+  \begin{itemize}
+    \item
+      For each sort symbol $s \in S$, a \emph{carrier} set $X_s$.
+    \item
+      For each relation symbol $r \in R$ with arity $r : s_1 \times \dots \times s_n$, a relation $r_X \subseteq X_{s_1} \times \dots \times X_{s_n}$.
+  \end{itemize}
+
+  A \emph{morphism of relational structures} $f : X \rightarrow Y$  consists of a function $f_s : X_s \rightarrow Y_s$ that are compatible with the relations $r_X$ and $r_Y$ for all $r$.
+  That is, we require that if $(x_1, \dots, x_n) \in r_X$ for some relation symbol $r : s_1 \times \dots \times s_n$, then $(f_{s_1}(x_1), \dots, f_{s_n}(x_n)) \in r_Y$.
+  The \emph{category of relational structures} is denoted by $\mathrm{Rel}_\mathcal{S}$.
+
+  Let $\mathcal{S} = (S, P \sqcup F)$ be an algebraic signature.
+  An \emph{algebraic structure} for $\mathcal{S}$ is a relational structure $X$ for $\mathcal{S}$ such that $f_X$ is the graph of a partial function for all $f \in F$.
+  Thus if $(x_1, \dots, x_n, y) \in f_X$ and $(x_1, \dots, x_n, z) \in f_X$, then $y = z$.
+  We use $f_X(x_1, \dots, x_n)$ to denote the unique element $y$
+ such that $(x_1, \dots, x_n, y) \in f_X$, and we write $f_X(x_1, \dots, x_n) \downarrow$ to say that such an element $y$ exists.
+
+  A \emph{morphism of algebraic structures} is a morphism of underlying relational structures.
+  The \emph{category of algebraic structures} is denoted by $\mathrm{Alg}_\mathcal{S}$.
+\end{definition}
+
+When no confusion can arise, we suppress sort annotations.
+Thus if $X$ is a relational structure, then we write $x \in X$ to mean that $x \in X_s$ for some $s \in S$.
+Similarly, if $f : X \rightarrow Y$ is a morphism of relational structures and $x \in X_s$, then we often denote the image of $x$ under $f$ by $f(x)$ instead of $f_s(x)$.
+
+If the signature $\mathcal{S}$ is clear from context, we abbreviate $\mathrm{Rel}_\mathcal{S}$ as $\mathrm{Rel}$ and $\mathrm{Alg}_\mathcal{S}$ as $\mathrm{Alg}$.
+
+\begin{proposition}
+  \label{prop:rel-cocomplete}
+  Let $\mathcal{S} = (S, R)$ be a relational signature.
+  All colimits of relational structures exist, and commute with colimits on carrier sets.
+\end{proposition}
+\begin{proof}
+  Let $D : I \rightarrow \mathrm{Rel}_\mathcal{S}$ be a diagram of relational structures.
+  We define the carrier sets of our candidate colimit structure $X$ by the colimit of carrier sets.
+  That is,
+  \begin{equation}
+    X_s = \operatorname*{colim}_{i \in I} D(i)_s
+  \end{equation}
+  for all $s \in S$.
+  We obtain evident maps $(p_i)_s : D(i)_s \rightarrow X_s$ for all objects $i$ in $I$ and $s \in S$.
+  Let $r : s_1 \times \dots \times s_n$ be a relation symbol.
+  Then we define $r_X$ as union over the images of the $r_{D(i)}$.
+  Thus,
+  \begin{equation}
+    r_X = \bigcup_{i \in I} p_i(r_{D(i)})
+  \end{equation}
+  where we abbreviated $p_i(r_{D(i)}) = ((p_i)_{s_1} \times \dots \times (p_i)_{s_n})(r_{D(i)})$.
+\end{proof}
+
+\begin{proposition}
+  Let $\mathcal{S} = (S, R)$ be a relational signature.
+  Then a relational structure $X$ is finitely presentable if and only if
+  \begin{equation}
+    \sum_{s \in S} |X_s| < \infty,
+  \end{equation}
+  that is, if and only if $X_s$ is empty for almost all $s$ and finite for all other $s$.
+\end{proposition}
+\begin{proof}
+  The finitely presentable objects in $\mathrm{Set}$ are the finite sets.
+  An object $(X_i)_{i \in I}$ in a product category $\prod_{i \in I} \mathcal{C}$ is finitely presntable if and only if $X_i$ is finitely presentable in $\mathcal{C}_i$ for all $i$.
+  This proves the claim where $R = \emptyset$, because $\mathrm{Rel}_{(S, \emptyset)} \simeq \prod_{s \in S} \mathrm{Set}$.
+  Finally, the general case follows from the fact that the forgetful functor $\mathrm{Rel}_\mathcal{S} \rightarrow \mathrm{Rel}_{(S, \emptyset)}$ is full and faithful and preserves colimits (Proposition \ref{prop:rel-cocomplete}).
+  \todo{
+    No, this functor is not full.
+    The proposition is actually not true as stated:
+    We must also have that almost all relations are empty.
+    Otherwise $\operatorname{colim}_i \mathrm{Hom}(X, D(i)) \rightarrow \mathrm{Hom}(X, \operatorname{colim} D)$ need not be surjective (it is injective though).
+  }
+\end{proof}
+\todo{
+  Should call finitely presentable relational structures simply finite.
+  Note that finitely presentable algebraic structures need not be finite as relational structures.
+}
+
+\begin{proposition}
+  \label{prop:surjective-orthogonal-reflection}
+  Let $\mathcal{S} = (S, R)$ be a finite relational signature.
+  Let $M$ be a finite set of epimorphisms of finitely presentable relational structures.
+  Let
+  \begin{equation}
+    X_0 \xrightarrow{x_0} X_1 \xrightarrow{x_1} \dots
+  \end{equation}
+  be any sequence of maps of relational structures satisfying the conditions of Proposition \ref{prop:orth-refl-constr-prop} such that furthermore $X_0$ is finitely presentable.
+  Then the sequence is eventually stationary.
+  That is, there exists $m$ sucht that for all $n \geq m$, the transition map $x_n$ is an isomorphism.
+\end{proposition}
+\begin{proof}
+  Since all maps in $M$ are surjective and colimits of relational structures commute with colimits on carrier sets, it follows that all maps in $\mathrm{Cell}(M)$ are surjective.
+  Thus the cardinality of the carriers of the $X_n$ decreases monotonically with $n$.
+  Eventually, the cardinality must thus become stable, say after $n_0 \in \mathbb{N}$.
+  Without loss of generality, we may assume that $x_n$ is the identity map on carriers for $n \geq n_0$.
+  Let $r \in R$.
+  Then for all $n \geq n_0$, we have that $r_{X_n} \subseteq r_{X_{n + 1}} \subseteq (X_{n_0}){s_1} \times \dots \times (X_{n_0})_{s_n}$, and the latter is a finite set.
+  Thus, we eventually have $r_{X_n} = r_{X_{n + 1}}$.
+  Because $R$ is finite, this holds simultaneously for all $r \in R$ for large enough $n_1 \geq n_0$.
+  For $n \geq n_1$ we thus have $X_n = X_{n + 1}$.
+\end{proof}
+
+\begin{remark}
+  Proposition \ref{prop:surjective-orthogonal-reflection} can likely be generalized to locally finitely presentable categories, as such categories are always co-wellpowered:
+  For every object $X$, there exists up to isomorphism only a \emph{set} of epimorphism $X \twoheadrightarrow Y$.
+  One now has to identify objects for which this set is finite.
+\end{remark}
+
+\begin{proposition}
+  Let $\mathcal{S} = (S, P \sqcup F)$ be an algebraic signature.
+  Then there exists a set $M$ of epimorphisms of relational structures such that the relational structures are algebraic if and only if they are injective to $M$.
+\end{proposition}
+\begin{proof}
+  \todo{
+    Maybe postpone the proof until after we have introduced relational sequents?
+  }
+  Let $f : s_1 \times \dots \times s_n \times s$ be a function symbol.
+  We construct an epimorphism $m_f : A_f \rightarrow B_f$ of relational structures such that relational structures $X$ are orthogonal to $m_f$ if and only if $f_X$ is the graph of a partial function.
+  Then $M = \{ m_f \mid f \in F \}$ is a set of morphisms with the required property.
+
+  $A_f$ is the relational structure with carriers given by distinct symbols $c_1, \dots, c_n, d, e$, where $c_i$ has sort $s_i$ and both $d$ and $e$ have sort $s$.
+  $r_{A_f}$ is empty for all $r \neq f$, and
+  \begin{equation}
+    f_{A_f} = \{ (c_1, \dots, c_n, d), (c_1, \dots, c_n, e) \}.
+  \end{equation}
+  Let $B_f$ be the quotient of $A_f$ given by identifying $d$ and $e$, and let $m_f : A_f \rightarrow B_f$ be the evident quotient map.
+
+  The data of a map $a : A_f \rightarrow X$ to a relational structure $X$ is equivalent to elements $x_1, \dots, x_n, y, z$ in the carriers of $X$ such that $r_X(x_1, \dots, x_n, y)$ and $r_X(x_1, \dots, x_n, z)$.
+  A factorization $b : B_f \rightarrow X$ exists (necessarily uniquely) if and only if $y = z$.
+  Thus if all such factorizations exist, then $f_X$ is the graph of a partial function.
+\end{proof}
+
+\begin{corollary}
+  Let $\mathcal{S} = (S, P \sqcup F)$ be an algebraic signature.
+  The category of algebraic structures is a reflective subcategory of the category of relational structures.
+  \qed
+\end{corollary}
+
+We denote the free algebraic structure functor by $\mathrm{FAlg} : \mathrm{Rel} \rightarrow \mathrm{Alg}$.
+
+\begin{corollary}
+  Let $\mathcal{S} = (S, P \sqcup F)$ be an algebraic signature.
+  The category of algebraic structures is cocomplete.
+\end{corollary}
+\begin{proof}
+  As in every reflective subcategory, colimits of algebraic structures can be computed by first computing the colimit of relational structures and then applying the free-algebra functor.
+\end{proof}
+
+\subsection{Relational theories and essentially algebraic theories}
+
+Fix a relational signature $(S, R)$.
+We assume a countable supply of variable symbols for each sort $s \in S$.
+\begin{definition}
+  \label{def:relational-syntax}
+  A \emph{relational atom} is a statement of one of the following forms:
+  \begin{enumerate}
+    \item
+      \label{itm:relation-atom}
+      $r(x_1, \dots, x_n)$, where $r : s_1 \times \dots \times s_n$ is a relation symbol and the $v_i$ are variables of sort $s_i$ for all $i \in \{1, \dots, n\}$.
+    \item
+      $x \downarrow$ where $x$ is a variable.
+    \item
+      $x \equiv y$, where $x$ and $y$ are variables of the same sort.
+  \end{enumerate}
+  A \emph{relational formula} is a finite conjunction of flat atoms.
+  A \emph{relational sequent} is an implication of flat formulas.
+\end{definition}
+
+\begin{definition}
+  Let $\mathcal{S} = (S, P \sqcup F)$ be an algebraic signature.
+  The set of \emph{terms} and a sort assigned to each term is given by the following recursive definition:
+  \begin{enumerate}
+    \item
+      If $x$ is a variable of sort $s$, then $x$ is a term of sort $s$.
+    \item
+      If $f : s_1 \times \dots \times s_n \rightarrow s$ is a function symbol and $t_1, \dots, t_n$ are terms such that $t_i$ has sort $s_i$ for all $i = 1, \dots, n$, then $f(t_1, \dots, t_n)$ is a term of sort $s$.
+  \end{enumerate}
+  \emph{Algebraic atoms, formulas and sequents} are defined as in definition \ref{def:relational-syntax}, with two changes:
+  \begin{enumerate}
+    \item
+      In each type of atom, also composite terms of the same sort are allowed in place of only variables.
+    \item
+      An algebraic atom $r(t_1, \dots, t_n)$ is valid only if $r = p$ is a predicate symbol (but not if $r$ is a function symbol).
+  \end{enumerate}
+  \todo{Maybe easier to just state it explicitly.}
+\end{definition}
+
+\begin{definition}
+  \label{def:relational-semantics}
+  Let $X$ be a relational structure.
+  An \emph{interpretation of a set of variables $V$} in $X$ is a map $\mathcal{I}$ that assigns to each variable $v \in V$ of sort $s$ an element $\mathcal{I}(v) \in X_s$.
+  An \emph{interpretation of a relational atom $\phi$} in $X$ is an interpretation $\mathcal{I}$ of the variables occuring in $\phi$ such that one of the following conditions holds:
+  \begin{enumerate}
+    \item
+      $\phi = r(x_1, \dots, x_n)$ for some relation symbol $r$ and $(\mathcal{I}(x_1), \dots, \mathcal{I}(x_1)) \in r_X$.
+    \item
+      $\phi = x \downarrow$ for some variable $x$.
+    \item
+      $\phi = x \equiv y$ for some variables $x$ and $y$, and $\mathcal{I}(x) = \mathcal{I}(y)$.
+  \end{enumerate}
+  An \emph{interpretation of a relational formula $\mathcal{F} = \phi_1 \land \dots \land \phi_n$} in $X$ is an interpretation of the variables occuring in $\mathcal{F}$ that restricts to an interpretation of $\phi_i$ for each $i \in \{1, \dots, n\}$.
+
+  A relational structure $X$ \emph{satisfies} a relational sequent $\mathcal{F} \Rightarrow \mathcal{G}$ if each interpretation of $\mathcal{F}$ in $X$ can be extended to an interpretation of $\mathcal{F} \land \mathcal{G}$ in $X$.
+\end{definition}
+
+\begin{definition}
+  Let $\mathcal{S} = (S, P \sqcup F)$ be an algebraic signature and let $X$ be an algebraic structure.
+
+  An \emph{interpretation of a term $t$} in $X$ is an interpretation $\mathcal{I}$ of the variables occuring in $t$ such that the following recursive extension of $\mathcal{I}$ is well-defined on $t$:
+  \begin{equation}
+    \mathcal{I}(f(t_1, \dots, t_n)) = f_X(\mathcal{I}(t_1), \dots, \mathcal{I}(t_n)).
+  \end{equation}
+  Note that the right-hand side might not be defined; in this case also the left-hand side is undefined.
+
+  An \emph{interpretation of an algebraic atom} in $X$ is defined analogously to the interpretation of a relational atom, but with the additional condition that the interpretation is defined on all (possibly composite) terms occuring in the atom.
+
+  An \emph{interpretation of an algebraic formula $\mathcal{F} = \phi_1 \land \dots \land \phi_n$} is an interpretation of the variables occuring in $\mathcal{F}$ that restricts to an interpretation of $\phi_i$ for each $i \in \{1, \dots, n\}$.
+
+  An algebraic structure $X$ \emph{satisfies} an algebraic sequent $\mathcal{F} \Rightarrow \mathcal{G}$ if each interpretation of $\mathcal{F}$ in $X$ can be extended to an interpretation of $\mathcal{F} \land \mathcal{G}$ in $X$.
+\end{definition}
+
+\begin{lemma}
+  \label{lem:functionality-axioms}
+  Let $\mathcal{S} = (S, P \sqcup F)$ be an algebraic signature and let $X$ be a relational structure.
+  Then $X$ is an algebraic structure if and only if it satisfies the relational sequent
+  \begin{equation}
+    \label{eq:functionality-axiom}
+    f(v_1, \dots, v_n, u_0) \land f(v_1, \dots, v_n, u_1) \Rightarrow u_0 = v_1
+  \end{equation}
+  for each function symbol $f : s_1 \times \dots \times s_n \rightarrow s$.
+\end{lemma}
+\begin{proof}
+  The relational structure $X$ satisfies the sequent \eqref{eq:functionality-axiom} if and only if $f_X$ is right-unique, i.e. the graph of a partial function.
+\end{proof}
+
+\begin{definition}
+  Let $\mathcal{S} = (S, P \sqcup F)$ be an algebraic signature.
+
+  Let $t$ be a term.
+  The \emph{flattening} of $t$ consists of a relational formula $\mathrm{Flat}(t)$ and a result variable $v_\mathrm{Flat}(t)$.
+  Flattening is defined recursively as follows:
+  \begin{enumerate}
+    \item
+      If $t = v$ is a variable, then $\mathrm{Flat}(t) = \top$ is the empty conjunction and $v_\mathrm{Flat}(t) = v$.
+    \item
+      \label{itm:flattening-composite}
+      If $t = f(t_1, \dots, t_n)$, then
+      \begin{equation}
+        \mathrm{Flat}(t) = \mathrm{Flat}(t_1) \land \dots \land \mathrm{Flat}(t_n) \land f(v_\mathrm{Flat}(t_1), \dots, v_\mathrm{Flat}(t_n), u)
+      \end{equation}
+      where $u$ is a fresh variable, and $v_\mathrm{Flat}(t) = u$.
+  \end{enumerate}
+
+  Let $\phi$ be an algebraic atom.
+  The flattening $\mathrm{Flat}(\phi)$ is a relational formula which is defined depending on the type of $\phi$ as follows:
+  \begin{enumerate}
+    \item
+      If $\phi = p(t_1, \dots, t_n)$ for some predicate $p$, then
+      \begin{equation}
+        \mathrm{Flat}(\phi) = \mathrm{Flat}(t_1) \land \dots \land \mathrm{Flat}(t_n) \land p(v_\mathrm{Flat}(t_1), \dots, v_\mathrm{Flat}(t_n)).
+      \end{equation}
+    \item
+      If $\phi = t \downarrow$ for some term $t$, then
+      \begin{equation}
+        \mathrm{Flat}(\phi) = \mathrm{Flat}(t) \land v_\mathrm{Flat}(t) \downarrow.
+      \end{equation}
+    \item
+      If $\phi$ is of the form $t_1 \equiv t_2$ for terms $t_1, t_2$, then
+      \begin{equation}
+        \mathrm{Flat}(\phi) = \mathrm{Flat}(t_1) \land \mathrm{Flat}(t_2) \land v_\mathrm{Flat}(t_1) \equiv v_\mathrm{Flat}(t_2).
+      \end{equation}
+  \end{enumerate}
+  The flattening of an algebraic formula is the conjunction of the flattenings of each atom making up the formula.
+  The flattening of an algebraic sequent is given by flattening premise and conclusion.
+\end{definition}
+Note that the flattening of a term depends on the choice of ``fresh'' variable in clause \ref{itm:flattening-composite}.
+\todo{Explain more how we're always asusming that the variable is picked such that it does not occur in other syntactic objects in the current scope.}
+
+\begin{lemma}
+  \label{lem:flattening-versus-interpretation}
+  Let $R = P \sqcup F$ be the structure of an algebraic signature and let $X$ be an algebraic structure.
+  \begin{enumerate}
+    \item
+      Let $t$ be a term and let $\mathcal{I}$ be an interpretation of the variables occuring in $t$ in $X$.
+      Then $\mathcal{I}$ is can be extended to the term $t$ if and only if $\mathcal{I}$ can be extended to an interpretation of of the relational formula $\mathrm{Flat}(t)$.
+      In either case, if  an $\mathcal{J}$ exists, then it exists uniquely, and $\mathcal{J}(v_\mathrm{Flat}(t)) = \mathcal{I}(t)$.
+    \item
+      Let $\phi$ be an algebraic atom and let $\mathcal{I}$ be an interpretation of the variables occuring in $\phi$ in $X$.
+      Then $\mathcal{I}$ is an interpretation of $\phi$ if and only if $\mathcal{I}$ can be extended to an interpretation $\mathcal{J}$ of the relational formula $\mathrm{Flat}(\phi)$.
+      If $\mathcal{J}$ exists, then it exists uniquely.
+    \item
+      Let $\mathcal{S}$ be an algebraic sequent.
+      Then $X$ satisfies $\mathcal{S}$ if and only if it satisfies the relational sequent $\mathrm{Flat}(\mathcal{S})$.
+  \end{enumerate}
+\end{lemma}
+\begin{proof}
+  By construction.
+\end{proof}
+
+\begin{theorem}
+  Let $R = P \sqcup F$ be the structure of an algebraic signature, let $T$ be a set of algebraic sequents, and let $X$ be a relational structure.
+  Then $X$ is an algebraic structure that satisfies the algbraic sequents in $T$ if and only if it satisfies the sequents \eqref{eq:functionality-axiom} for all $f \in F$ and the flattenings of all sequents in $T$.
+  \qed
+\end{theorem}
+
+\begin{lemma}
+  \label{lem:unflatten}
+  Let $\mathcal{S} = (S, P \sqcup F)$ be an algebraic signature.
+  Let $\phi$ be a relational formula.
+  Then there exists an algebraic formula $\mathrm{Unflat}(\phi)$ with the following properties:
+  \begin{enumerate}
+    \item
+      Every variable occurs in $\phi$ if and only if it occurs in $\mathrm{Unflat}(\phi)$.
+    \item
+      Let $\mathcal{I}$ be an interpretation of the variables of $\phi$ in an algebraic structure $X$.
+      Then $\mathcal{I}$ is an interpretation of the algebraic formula $\phi$ if and only if it is an interpretation of the relational formula $\mathrm{Unflat}(\phi)$.
+  \end{enumerate}
+\end{lemma}
+\begin{proof}
+  Replace every relational atom of the form $f(x_1, \dots, x_n, x)$ for some function symbol $f : s_1 \times \dots \times s_n \rightarrow s$ with the algebraic atom $f(x_1, \dots, x_n, x)$.
+\end{proof}
+
+\todo{
+  Add a converse:
+  Every relational sequent can be obtained as flattening of an algebraic sequent.
+}
+
+\subsection{Satisfaction as lifting problem}
+
+\begin{definition}
+  We associate to each flat atom $\phi$ a relational structure $[\phi]$ and an interpretation $\mathcal{I}_\phi$ of $\phi$ in $[\phi]$ as follows:
+  \begin{enumerate}
+    \item
+      If $\phi = r(v_1, \dots, v_n)$ where $r : s_1 \times \dots \times s_n$, then the carriers of $[\phi]$ are given by distinct elements $\mathcal{I}_\phi(v_i) \in [\phi]_{s_i}$, and $(\mathcal{I}_\phi(v_1), \dots, \mathcal{I}_\phi(v_n)) \in r_{[\phi]}$.
+      The relations $r'_{[\phi]}$ for $r \neq r'$ are empty.
+    \item
+      If $\phi = v \downarrow$, where $v$ has sort $s$, then $[\phi]_s$ contains a single element $\mathcal{I}_\phi(v)$.
+      All other carrier sets and all relations are empty.
+    \item
+      If $\phi = v_1 \equiv v_2$, where $v_1$ and $v_2$ have sort $s$, then $[\phi]_s$ contains a single element $\mathcal{I}_\phi(v_1) = \mathcal{I}_\phi(v_2)$.
+      All other carrier sets and all relations are empty.
+  \end{enumerate}
+
+  Let $\mathcal{F} = \phi_1 \land \dots \land \phi_n$ be a relational formula.
+  Then we denote by $[\mathcal{F}]$ the relational structure
+  \begin{equation}
+    ([\phi_1] \amalg \dots \amalg [\phi_n]) / \sim
+  \end{equation}
+  where $\sim$ is the relation given by
+  \begin{equation}
+    \mathcal{I}_{\phi_i}(v) \sim \mathcal{I}_{\phi_j}(v)
+  \end{equation}
+  for all $i, j \in \{1, \dots, n\}$ and variables $v$ occuring in both $\phi_i$ and $\phi_j$.
+  
+  Let $\mathcal{S} = \mathcal{F} \Rightarrow \mathcal{G}$ be a relational sequent.
+  Then we denote by $[\mathcal{S}]$ the evident map $[\mathcal{F}] \rightarrow [\mathcal{F} \land \mathcal{G}]$.
+\end{definition}
+
+\begin{proposition}
+  \label{prop:relational-formula-structure-universal}
+  Let $\mathcal{F}$ be a relational formula and let $X$ be a relational structure.
+  Then there is a bijection between interpretations of $\mathcal{F}$ in $X$ and maps $[\mathcal{F}] \rightarrow X$.
+\end{proposition}
+\begin{proof}
+  If $f : [\mathcal{F}] \rightarrow X$, then $f \circ I_\mathcal{F}$ is an interpretation of $\mathcal{F}$ in $X$.
+  For the converse, let $\mathcal{F} = \phi_1 \land \dots \land \phi_n$ for relational atoms $\phi_i$.
+  Then every interpretation $\mathcal{I}$ of $\mathcal{F}$ restricts to an interpretation of $\phi_i$ for each $i$.
+  The carrier of $[\phi_i]$ is defined using the variables of $\phi_i$, which defines an evident map $[\phi_i] \rightarrow X$.
+  Since the restrictions of $\mathcal{I}$ to the variables in each $\phi_i$ agree on variables that occur in simultaneously in two atoms, the individual maps $[\phi_i] \rightarrow X$ glue to a map $[\mathcal{F}] \rightarrow X$.
+\end{proof}
+
+In light of this universal property, we conflate relational formulas $\mathcal{F}$ with the relational structure $[\mathcal{F}]$ and variables occuring in $\mathcal{F}$ with elements of $[\mathcal{F}]$ when confusion is unlikely.
+Similarly, we conflate relational sequents $\mathcal{S}$ with the corresponding morphisms $[\mathcal{S}]$.
+\todo{
+  Does that actually happen somewhere?
+}
+
+\begin{proposition}
+  \label{prop:relational-sequent-morphism-lifts}
+  Let $\mathcal{S}$ be a relational sequent and let $X$ be a relational structure.
+  Then $X$ satisfies $\mathcal{S}$ if and only if $X$ is injective to $[\mathcal{S}]$.
+\end{proposition}
+\begin{proof}
+  Let $\mathcal{S} = \mathcal{F} \Rightarrow \mathcal{G}$.
+  By Proposition \ref{prop:relational-formula-structure-universal}, interpretations $\mathcal{I}$ of the premise $\mathcal{F}$ correspond to maps $\langle \mathcal{I} \rangle : [\mathcal{F}] \rightarrow X$, and interpretations $\mathcal{J}$ of $\mathcal{F} \land \mathcal{G}$ correspond to maps $\langle \mathcal{J} \rangle : [\mathcal{F} \land \mathcal{G}] \rightarrow X$.
+  The map $[\mathcal{S}] : [\mathcal{F}] \rightarrow [\mathcal{F} \land \mathcal{G}]$ can be obtained by restriction of the generic interpretation of $\mathcal{F} \land \mathcal{G}$ in $[\mathcal{F} \land \mathcal{G}]$ to the variables occurring in $\mathcal{F}$.
+  It follows that
+  \begin{equation}
+    \begin{tikzcd}
+      \left[\mathcal{F}\right] \arrow[r, "\langle \mathcal{I} \rangle"] \arrow[d, "{[\mathcal{S}]}"'] & X \\
+      \left[\mathcal{F} \land \mathcal{G}\right] \arrow[ur, "\langle \mathcal{J} \rangle"']
+    \end{tikzcd}
+  \end{equation}
+  commutes if and only if $\mathcal{I}$ is a restriction of $\mathcal{J}$.
+\end{proof}
+
+\begin{definition}
+  Let $\mathcal{S} = (S, P \sqcup F)$ be an algebraic signature.
+  We associate to each algebraic formula $\mathcal{F}$ the algebraic structure
+  \begin{equation}
+    [\mathcal{F}] = \mathrm{FAlg}([\mathrm{Flat}(\mathcal{F}))
+  \end{equation}
+  and to each algebraic sequent $\mathcal{S} = \mathcal{F} \Rightarrow \mathcal{G}$ the evident morphism
+  \begin{equation}
+    [\mathcal{S}] : [\mathcal{F}] \rightarrow [\mathcal{F} \land \mathcal{G}]
+  \end{equation}
+  of algebraic structures.
+\end{definition}
+
+\begin{proposition}
+  \label{prop:algebraic-formula-structure-universal}
+  Let $\mathcal{S} = (S, P \sqcup F)$ be an algebraic signature.
+  Let $\mathcal{F}$ be an algebraic formula and let $X$ be an algebraic structure.
+  Then there is a bijection between interpretations of $\mathcal{F}$ in $X$ and maps $[\mathcal{F}] \rightarrow X$.
+\end{proposition}
+\begin{proof}
+  This follows by combining Lemma \ref{lem:flattening-versus-interpretation}, Proposition \ref{prop:algebraic-formula-structure-universal} and the universal property of the free algebraic structure functor.
+\end{proof}
+
+\begin{proposition}
+  Let $\mathcal{S}$ be an algebraic sequent and let $X$ be an algebraic structure.
+  Then $X$ satisfies $\mathcal{S}$ if and only if $X$ is injective to $[\mathcal{S}]$.
+\end{proposition}
+\begin{proof}
+  Analogously to the proof of Proposition \ref{prop:relational-sequent-morphism-lifts}.
+\end{proof}
+
+\begin{lemma}
+  \label{lem:composition-sequent-morphisms}
+  Let $\mathcal{S} = \mathcal{F} \Rightarrow \mathcal{G}$ and $\mathcal{T} = \mathcal{G} \Rightarrow \mathcal{H}$ be relational (algebraic) sequents.
+  Then
+  \begin{equation}
+    [\mathcal{F} \land \mathcal{G} \Rightarrow \mathcal{H}] \circ [\mathcal{F} \Rightarrow \mathcal{G}] = [\mathcal{F} \Rightarrow \mathcal{G} \land \mathcal{H}].
+  \end{equation}
+\end{lemma}
+\begin{proof}
+  Follows from Propositions \ref{prop:relational-formula-structure-universal} and \ref{prop:algebraic-formula-structure-universal}.
+\end{proof}
+
+\subsection{Epimorphisms of relational structures}
+\todo{
+  Kind of a bad name for this section, since we also classify in general the image of $\mathcal{S} \mapsto [\mathcal{S}]$, which includes not only epimorphisms.
+}
+
+\begin{definition}
+  Let $f : X \rightarrow Y$ be a map of relational structures.
+  We say that $f$ is \emph{surjective} if $f_s: X_s \rightarrow Y_s$ is a surjective map for all $s \in S$.
+\end{definition}
+
+\begin{proposition}
+  \label{prop:epimorphisms-classification}
+  Let $\mathcal{S} = (S, R)$ be a relational signature.
+  Let $f : X \rightarrow Y$ be a map of relational structures.
+  \begin{enumerate}
+    \item
+      \label{itm:relational-epimorphisms}
+      $f$ is an epimorphism if and only if $f$ is surjective.
+    \item
+      \label{itm:relational-effective-epimorphisms}
+      $f$ is an effective epimorphism if and only if $f$ is surjective and furthermore the induced maps $f_r : r_X \rightarrow r_Y$ are surjective for all $r \in R$.
+  \end{enumerate}
+\end{proposition}
+\begin{proof}
+  \ref{itm:relational-epimorphisms}.
+  Note that, for every morphism $f : X \rightarrow Y$ in a cocomplete category $\mathcal{C}$, $f$ is an epimorphism if and only if
+  \begin{equation}
+    \begin{tikzcd}
+      A \arrow[r, "f"] \arrow[d, "f"'] & A \arrow[d] \\
+      A \arrow[r] & A
+    \end{tikzcd}
+  \end{equation}
+  is a pushout square.
+  Because the forgetful functor from relational structures to $S$-indexed families of sets preserves colimits, it follows that it preserves epimorphisms, i.e. that every epimorphism of relational structures must be surjective.
+  The same forgetful functor is full and faithful, hence reflects epimorphisms.
+  This shows that surjective maps of relational structures are indeed epimorphisms.
+
+  \ref{itm:relational-effective-epimorphisms}.
+  This follows from the construction of colimits in Proposition \ref{prop:rel-cocomplete}.
+\end{proof}
+
+\begin{definition}
+  Let $\mathcal{S}$ be a relational sequent.
+  We say that $\mathcal{S}$ is \emph{surjective} if every variable in the conclusion of $\mathcal{S}$ also appears in the premise.
+  We say that $\mathcal{S}$ is \emph{effectively epi} if every atom in the conclusion of $\mathcal{S}$ is of the form $v_1 \equiv v_2$ for variables $v_1, v_2$ that also occur in the premise.
+\end{definition}
+
+\begin{proposition}
+  \label{prop:semantics-relational-sequents}
+  The image of (surjective, effectively epi) relational sequents under the assignment $\mathcal{S} \mapsto [\mathcal{S}]$ can be described as follows:
+  \begin{enumerate}
+    \item
+      \label{itm:semantics-arbitrary-relational-sequent}
+      If $\mathcal{S}$ is a relational sequent, then $[\mathcal{S}]$ is a map finite relational structures.
+      Conversely, every map of finite relational structures is isomorphic to a map of the form $[\mathcal{S}]$ for a relational sequent $\mathcal{S}$.
+    \item
+      \label{itm:semantics-surjective-relational-sequent}
+      If $\mathcal{S}$ is surjective, then $[\mathcal{S}]$ is a surjection of finite relational structures.
+      Conversely, every surjection of finite relational structures is isomorphic to a map of the form $[\mathcal{S}]$ for a surjective relational sequent $\mathcal{S}$.
+    \item
+      \label{itm:semantics-quotient-relational-sequent}
+      If $\mathcal{S}$ is effectively epi, then $[\mathcal{S}]$ is an effective epimorphism of finite relational structures.
+      Conversely, every effective epimorphism of finite relational structures is isomorphic to a map of the form $[\mathcal{S}]$ for an effectively epi relational sequent $\mathcal{S}$.
+  \end{enumerate}
+\end{proposition}
+\begin{proof}
+  \ref{itm:semantics-arbitrary-relational-sequent}.
+  Relational sequents $\mathcal{S}$ are by definition finite formulas, so it follows from the definition of the map $[\mathcal{S}]$ that its domain and codomain are finite.
+
+  Conversely let $f : A \rightarrow B$ be a map of finite relational structures.
+  Choose distinct variables $v_x$ of sort $s$ for all sorts $s$ and $x \in A_s$.
+  The formulas
+  \begin{mathpar}
+    \mathcal{F}_{\mathrm{car}} = \bigwedge_{x \in A} v_x \downarrow
+    \and
+    \mathcal{F}_{\mathrm{rel}} = \bigwedge_{\substack{r \in R\\(x_1, \dots, x_n) \in r_A}} r(v_{x_1}, \dots, v_{x_n})
+  \end{mathpar}
+  are finite (and hence well-defined) because $A$ is finite.
+  The formula $\mathcal{F}_{\mathrm{car}}$ encodes the carriers of $A$, and $\mathcal{F}_{\mathrm{rel}}$ encodes the relations.
+  Thus if $\mathcal{F} = \mathcal{F}_{\mathrm{car}} \land \mathcal{F}_{\mathrm{rel}}$, then $A \cong [\mathcal{F}]$.
+
+  Define similarly variables $v_y$ for each $y \in B$ and formulas $\mathcal{G}_{\mathrm{car}}, \mathcal{G}_{\mathrm{rel}}$ for $B$.
+  Set
+  \begin{equation}
+    \mathcal{G}_\mathrm{eq} = \bigwedge_{x \in A} v_x \equiv v_{f(x)}
+  \end{equation}
+  and let $\mathcal{G} = \mathcal{G}_{\mathrm{car}} \land \mathcal{G}_{\mathrm{rel}} \land \mathcal{G}_{\mathrm{eq}}$.
+  Then
+  \begin{equation}
+    B \cong [\mathcal{G}_{\mathrm{car}} \land \mathcal{G}_{\mathrm{rel}}] \cong [\mathcal{G}] \cong [\mathcal{G} \land \mathcal{F}]
+  \end{equation}
+  and it can be verified using the universal property of $[\mathcal{F}]$ (Proposition \ref{prop:relational-formula-structure-universal}) that
+  \begin{equation}
+    \begin{tikzcd}
+      \left[\mathcal{F}\right] \arrow[r] \arrow[d, "\cong"'] & \left[\mathcal{F} \land \mathcal{G} \right] \arrow[d, "\cong"] \\
+      A \arrow[r, "f"] & B
+    \end{tikzcd}
+  \end{equation}
+  commutes.
+
+  \ref{itm:semantics-surjective-relational-sequent}.
+  The carrier of a relational structure $[\mathcal{F}]$ obtained from a formula $\mathcal{F}$ is a quotient of the set of variables occuring in $\mathcal{F}$.
+  Thus if every variable in the conclusion $\mathcal{G}$ of a sequent $\mathcal{F} \Rightarrow \mathcal{G}$ occurs also in the premise $\mathcal{F}$, then the resulting map $[\mathcal{F} \Rightarrow \mathcal{G}]: [\mathcal{F}] \rightarrow [\mathcal{F} \land \mathcal{G}]$ is surjective.
+  Conversely, let $f : A \rightarrow B$ be a surjective map of finite relational structures.
+  Let $v_x$ for $x \in A$ and $\mathcal{F} = \mathcal{F}_\mathrm{car} \land \mathcal{F}_\mathrm{rel}$ be as in the proof of \ref{itm:semantics-arbitrary-relational-sequent}, so that $[\mathcal{F}] \cong A$.
+  Set
+  \begin{mathpar}
+    \mathcal{G}_\mathrm{eq} = \bigwedge_{\substack{x, y \in A\\f(x) = f(y)}} v_x \equiv v_y
+    \and
+    \mathcal{G}_{\mathrm{rel}} = \bigwedge_{\substack{r \in R\\x_1, \dots, x_n \in A\\(f(x_1), \dots, f(x_n)) \in r_B}} r(v_{x_1}, \dots, v_{x_n})
+  \end{mathpar}
+  and $\mathcal{G} = \mathcal{G}_\mathrm{eq} \land \mathcal{G}_\mathrm{rel}$.
+  Because all the the $v_x$ occur in $\mathcal{F}$, all the variables of $\mathcal{G}$ occur in $\mathcal{F}$.
+  By definition of $\mathcal{G}_\mathrm{eq}$, the map $[\mathcal{F} \land \mathcal{G}_\mathrm{eq}] \rightarrow B$ is an isomorphism on carriers, which then implies that $[\mathcal{F} \land \mathcal{G}] \cong B$ by definition of $\mathcal{G}_\mathrm{rel}$.
+  Thus $[\mathcal{\mathcal{F}} \Rightarrow \mathcal{G}] \cong f$.
+
+ \ref{itm:semantics-quotient-relational-sequent}.
+  If $\mathcal{S}$ is effectively epi and $f = [\mathcal{S}] : A \rightarrow B$, then the maps $f_r : r_A \rightarrow r_B$ are surjective for all relation symbols $r$.
+  Thus by Proposition \ref{prop:epimorphisms-classification}, $f$ is an effective epimorphism.
+
+  
+  Conversely, let $f : A \rightarrow B$ be an effective epimorphism of finite relational structures.
+  Let $v_x$ for $x \in A$ and $\mathcal{F} = \mathcal{F}_\mathrm{car} \land \mathcal{F}_\mathrm{rel}$ be as in the proof of \ref{itm:semantics-arbitrary-relational-sequent}, so that $[\mathcal{F}] \cong A$.
+  Let
+  \begin{equation}
+    \mathcal{G} = \mathcal{G}_\mathrm{eq} = \bigwedge_{\substack{x, y \in A\\f(x) = f(y)}} v_x \equiv v_y.
+  \end{equation}
+  By the same argument as in the proof of \ref{itm:semantics-surjective-relational-sequent}, it follows that $[\mathcal{F} \land \mathcal{G}] \rightarrow B$ is an isomorphism on carriers.
+  Let $r$ be a relation symbol and let $(y_1, \dots, y_n) \in r_B$.
+  Then because $f$ is an effective epimorphism, there exist $x_1, \dots, x_n \in A$ such $f(x_i) = y_i$ for all $i$ and $(x_1, \dots, x_n) \in r_A$.
+  Thus $\mathcal{F}$ contains the atom $r(v_{x_1}, \dots, v_{x_n})$, hence $(y_1, \dots, y_n)$ is in the image of $r_{[\mathcal{F} \land \mathcal{G}]} \rightarrow B$.
+  We conclude $[\mathcal{F} \land \mathcal{G}] \cong B$, hence $f \cong [\mathcal{F} \Rightarrow \mathcal{G}]$. 
+\end{proof}
+
+\begin{corollary}
+  Let $T$ be a set of surjective relational sequents.
+  Then $[T] = \{ [\mathcal{S}] \mid \mathcal{S} \in T\}$ is flub (Definition \ref{def:flub}).
+  The category $[T]^\pitchfork$ is a reflective subcategory of the category of $\mathrm{Rel}$.
+\end{corollary}
+\begin{proof}
+  Every morphism $[\mathcal{S}]$ for $\mathcal{S} \in T$ is a surjection, hence an epimorphism.
+  Thus lifts against $[\mathcal{S}]$ exist uniquely if they exist, and Proposition \ref{prop:orth-refl-constr-exist} applies.
+\end{proof}
+
+\todo{
+  TODO: Some remark/prose about this being the basis of eqlog.
+}
+
+\subsection{Epimorphisms of algebraic structures}
+\todo{
+  Bad name for the same reason as analogous subsection for relational structures.
+}
+Let $\mathcal{S} = (S, P \sqcup F)$ be an algebraic signature.
+
+\begin{definition}
+  Let $\mathcal{S}$ be an algebraic sequent.
+  We say that $\mathcal{S}$ is \emph{epi} if every variable in the conclusion of $\mathcal{S}$ also occurs in the premise.
+  We say that $\mathcal{S}$ is \emph{effectively epi} if every atom in the conclusion of $\mathcal{S}$ is of the form $t_1 \equiv t_2$ for terms $t_1, t_2$ that also occur in the premise.
+\end{definition}
+
+\begin{definition}
+  Let $f$ be a function symbol.
+  The \emph{totality sequent} $f \downarrow$ is given by
+  \begin{equation}
+    v_1 \downarrow \land \dots \land v_n \downarrow \Rightarrow f(v_1, \dots, v_n)\downarrow.
+  \end{equation}
+\end{definition}
+
+\begin{proposition}
+  Let $f$ be a function symbol. 
+  \begin{enumerate}
+    \item
+      An algebraic structure $X$ satisfies $f \downarrow$ if and only if $f_X$ is a total function.
+    \item
+      $[f \downarrow]$ is an epimorphism of algebraic structures.
+      \qed
+  \end{enumerate}
+\end{proposition}
+
+\begin{definition}
+  Let $g : X \rightarrow Y$ be  a map of algebraic structures.
+  We say that $X$ is \emph{saturated} (with respect to $g$) if and only if for all function symbols $f$ and elements $x_1, \dots, x_n \in X$, the implication
+  \begin{equation}
+    f_Y(g(x_1), \dots, g(x_n)) \downarrow \implies f_Y(x_1, \dots, x_n) \downarrow
+  \end{equation}
+  holds.
+\end{definition}
+
+\begin{proposition}
+  \label{prop:saturation}
+  Let $\mathrm{Tot} = \{ [f \downarrow] \mid f \in F \}$, and let $g : X \rightarrow Y$ be a map of algebraic structures.
+  Then there exists a factorization
+  \begin{equation}
+    \begin{tikzcd}
+      X \arrow[dr, "g"'] \arrow[rr, "h"] & & X' \arrow[dl, "g'"] \\
+      & Y
+    \end{tikzcd}
+  \end{equation}
+  such that $h$ is a relative $\mathrm{Tot}$-cell complex and $g'$ is saturated.
+  Moreover, the triple $(X', h, g')$ is unique up to unique isomorphism.
+\end{proposition}
+\begin{proof}
+  Consider the set $M$ of all triples $(f, a, b)$ commuting triangles
+  \begin{equation}
+    \begin{tikzcd}
+      \cdot \arrow[dr, "a"'] \arrow[rr, "{[f \downarrow]}"] & & \cdot \arrow[dl, "b"] \\
+      & Y
+    \end{tikzcd}
+  \end{equation}
+  $M$ is a set of epimorphisms in the slice category $\mathrm{Alg}_{/ Y}$.
+  It follows that $M$ is flub, so $M^\pitchfork$ is a reflective subcategory of $\mathrm{Alg}_{/ Y}$.
+  
+  A map with codomain $Y$ is saturated if and only if, as an object of $\mathrm{Alg}_{/ Y}$, it is injective to $M$.
+  Thus the reflection of $g$ into $M^\pitchfork$ results into a factorization $g = g' \circ h$ where $h$ is a relative $M$-cell complex and $g'$ is saturated.
+  Because the forgetful functor $\mathrm{Alg}_{/ Y} \rightarrow \mathrm{Alg}$ preserves colimits, $h$ is also a relative $\mathrm{Tot}$-cell complex.
+  \todo{
+    Also show that $h$ is a relative $\mathrm{Tot}$-cell complex, then it is a relative $M$-cell complex?
+    That's how you show uniqueness.
+  }
+\end{proof}
+
+\begin{definition}
+  Let $g : X \rightarrow Y$ be a map of algebraic structures.
+  We call the unique factorization $g = g' h$ as in Proposition \ref{prop:saturation} the \emph{saturization} of $g$.
+\end{definition}
+
+\begin{lemma}
+  \label{lem:saturated-epis}
+  Let $g : X \rightarrow Y$ be a saturated map of algebraic structures.
+  Then $g$ is an epimorphism in $\mathrm{Alg}$ if and only if it is an epimorphism in $\mathrm{Rel}$.
+\end{lemma}
+\begin{proof}
+  The free algebraic structure functor $\mathrm{Rel} \rightarrow \mathrm{Alg}$ preserves epimorphisms, which shows necessity of the condition.
+
+  Note that $\operatorname{Im}_\mathrm{Alg} g = \operatorname{Im}_\mathrm{Rel} g$, that is, the image algebraic structure can be computed as image of relational structures.
+  Because $g$ is an epimorphism in $\mathrm{Rel}$ or $\mathrm{Alg}$ if and only if the inclusion of the image in the corresponding category is an epimorphism, we may assume that $g$ is a monomorphism, i.e. injective on carriers.
+
+  Consider the the pushout $Z = Y \amalg^\mathrm{Rel}_X Y$ in $\mathrm{Rel}$.
+  There are inclusions $Y \cong Y_0 \subseteq Z$, $Y \cong Y_1 \subseteq Z$ corresponding to the two components of $Z$ such that $Y_0 \cup Y_1 = Z$, and an inclusions $X \subseteq Y_0, X \subseteq Y_1$.
+  We have $(Y_0)_s \cap (Y_1)_s = X_s$ for all sorts $s$, but note that the analogous equation does not hold for relations:
+  Epimorphisms of relational structures need not be surjective on relations.
+
+  We claim that $Z$ is an algebraic structure.
+  Thus let $f$ be a function symbol, and let $z_1, \dots, z_n, z, z' \in Z$ such that $\bar z = (z_1, \dots, z_n, z) \in f_Z$ and $\bar z' = (z_1, \dots, z_n, z') \in f_Z$.
+  We need to show that $z = z'$.
+
+  If $\bar z, \bar z' \in Y_0$ or $\bar z, \bar z' \in Y_1$ this follows from the fact that $Y_0 \cong Y \cong Y_1$ is an algebraic structure.
+  We may thus (by symmetry) assume that $\bar z \in Y_0$ and $\bar z' \in Y_1$.
+  Now $z_1, \dots, z_n \in Y_0 \cap Y_1$, hence $z_X$.
+  Because the inclusions $X \subseteq Y_i$ are saturated, we have $f_X(z_1, \dots, z_n) = z''$ for some $z'' \in X$.
+  It follows that $z = z''$ and $z' = z''$, hence $z = z'$.
+
+  Now, if $g$ is an epimorphism in $\mathrm{Alg}$, then the two maps $Y \rightarrow Y \amalg^\mathrm{Alg}_X Y = Z'$ agree.
+  But we have just shown that $Z' = Z$, so also the two maps $Y \rightarrow Y \amalg^\mathrm{Rel}_X Y$ agree, which implies that $g$ is surjective, i.e. an epimorphism in $\mathrm{Rel}$.
+\end{proof}
+
+\begin{proposition}
+  \label{prop:algebraic-epis}
+  Let $g : X \rightarrow Y$ be a map of algebraic structures.
+  \begin{enumerate}
+    \item
+      \label{itm:algebraic-epimorphisms}
+      Let $g = g' h$ be the totalization of $g$.
+      Then $g$ is an epimorphism in $\mathrm{Alg}$ if and only if $g'$ is an epimorphism in $\mathrm{Rel}$.
+    \item
+      \label{itm:algebraic-effective-epimorphisms}
+      $g$ is an effective epimorphism in $\mathrm{Alg}$ if and only if it is an effective epimorphism in $\mathrm{Rel}$.
+  \end{enumerate}
+\end{proposition}
+\begin{proof}
+  \ref{itm:algebraic-epimorphisms}.
+  Every morphism in $\mathrm{Tot}$ is an epimorphism.
+  Since epimorphisms are stable under pushouts and transfinite compositions, every relative $\mathrm{Tot}$-cell and in particular $h$ is an effective epimorphism.
+  We conclude with Lemma \ref{lem:saturated-epis}.
+
+  \ref{itm:algebraic-effective-epimorphisms}.
+  This follows from general properties of colimits and reflective subcategories.
+\end{proof}
+
+\begin{definition}
+  An algebraic sequent $\mathcal{S}$ is called \emph{epi} if every variable that occurs in the conclusion of $\mathcal{S}$ also occurs in the premise.
+\end{definition}
+
+\begin{proposition}
+  Let $\mathcal{S}$ be an algebraic sequent.
+  If $\mathcal{S}$ is epi, then the reflection of $[\mathrm{Flat}(\mathcal{S}]$ into the category of algebraic structures is an epimorphism of finite algebraic structures.
+  Conversely, if $f : A \rightarrow B$ is an epimorphism of finite algebraic structures, then there exists an epi algebraic sequent $\mathcal{S}$ such that $f \cong [\mathcal{S}]$.
+  \todo{Phrase this like the statement about relational sequents/structures.}
+  \todo{Also include something on arbitrary maps of finite relational structures?}
+\end{proposition}
+
+\begin{lemma}
+  \todo{This belongs in a previous section.}
+  Let $M$ be flub set of morphisms, and let $f : A \rightarrow B$.
+  Denote by $\overline{f} : \overline{A} \rightarrow \overline{B}$ the reflection of $f$ into $M^\pitchfork$.
+  Then
+  \begin{equation}
+    (M \cup \{ f \})^\perp = (M \cup \{ \overline{f} \})^\perp
+  \end{equation}
+  and
+  \begin{equation}
+    (M \cup \{ f \})^\pitchfork = (M \cup \{ \overline{f} \})^\pitchfork.
+  \end{equation}
+\end{lemma}
+\begin{proof}
+  Let $X$ be orthogonal (equivalently, injective) to $M$.
+  Then there is bijective correspondance between solutions to the following lifting problems:
+  \begin{equation}
+    \begin{tikzcd}    
+      A \arrow[r, "a"] \arrow[d, "f"'] & X \\
+      B \arrow[ur, dashed]
+    \end{tikzcd}    
+    \qquad
+    \begin{tikzcd}    
+      \overline{A} \arrow[r, "a'"] \arrow[d, "\overline{f}"'] & X \\
+      \overline{B}. \arrow[ur, dashed]
+    \end{tikzcd}    
+  \end{equation}
+  Here $a$ is an arbitrary map, and $a' : \overline{A} \rightarrow X$ is induced from $a$ by the universal property of $\overline{A}$ and $X$ being orthogonal to $\overline{f}$.
+\end{proof}
+
+\begin{lemma}
+  \label{lem:flattening-atoms}
+  Let $\mathcal{S} = (S, P \sqcup F)$ be an algebraic signature.
+  Let $\mathcal{F}$ be an algebraic formula and let $V$ be the set of variables that occur in $\mathcal{F}$.
+  Let $\mathrm{Flat}(\mathcal{F}) = \phi_1 \land \dots \land \phi_n$ for relational atoms $\phi_i$.
+  Let $\phi = \phi_i$ for some $i$ and let
+  \begin{equation}
+    V = \{ v \mid v \text{ occurs in } \mathcal{F} \text{ or in } \phi_j \text{ for some } j < i \}.
+  \end{equation}
+  Then $\phi$ has one of the following forms:
+  \begin{enumerate}
+    \item
+      \label{itm:flattened-predicate-case}
+      $\phi = p(v_1, \dots, v_m)$, where $p$ is a predicate symbol and $v_1, \dots, v_m \in V$.
+    \item
+      \label{itm:flattened-function-case}
+      $\phi = f(v_1, \dots, v_m, v)$, where $f : s_1 \times \dots \times s_m \rightarrow s$ is a function symbol, $v_1, \dots, v_m \in V$ and $v \notin V$.
+    \item
+      \label{itm:flattened-defined-case}
+      $\phi = v \downarrow$, where $v \in V$.
+    \item
+      \label{itm:flattened-equals-case}
+      $\phi = v_1 \equiv v_2$, where $v_1, v_2 \in V$.
+  \end{enumerate}
+\end{lemma}
+\begin{proof}
+  \todo{Tedious induction.}
+\end{proof}
+
+\begin{proposition}
+  \label{prop:semantics-algebraic-sequents}
+  Let $\mathcal{S} = (S, P \sqcup F)$ be an algebraic signature.
+  The image of (epi, quotient) algebraic sequents under the assignment $\mathcal{S} \mapsto [\mathcal{S}]$ can be described as follows:
+  \begin{enumerate}
+    \item
+      \label{itm:semantics-arbitrary-algebraic-sequent}
+      If $\mathcal{S}$ is an algebraic sequent, then $[\mathcal{S}]$ is a map of finite algebraic structures.
+      Conversely, every map of finite relational structures is isomorphic to a map of the form $[\mathcal{S}]$ for some algebraic sequent $\mathcal{S}$.
+    \item
+      \label{itm:semantics-epi-algebraic-sequent}
+      If $\mathcal{S}$ is an epi algebraic sequent, then $[\mathcal{S}]$ is an epimorphism of finite algebraic structures.
+      Conversely, every epimorphism of finite relational structures is isomorphic to a map of the form $[\mathcal{S}]$ for some epi algebraic sequent $\mathcal{S}$.
+    \item
+      \label{itm:semantics-quotient-algebraic-sequent}
+      If $\mathcal{S}$ is a quotient algebraic sequent, then $[\mathcal{S}]$ is an effective epimorphism of finite algebraic structures.
+      Conversely, every effective epimorphism of finite relational structures is isomorphic to a map of the form $[\mathcal{S}]$ for some quotient algebraic sequent $\mathcal{S}$.
+  \end{enumerate}
+\end{proposition}
+\begin{proof}
+  \ref{itm:semantics-arbitrary-algebraic-sequent}.
+  If $\mathcal{S}$ is an algebraic sequent, then by \ref{prop:semantics-relational-sequents}, $[\mathrm{Flat}(\mathcal{S})]$ is a map of finite relational structures, hence $\mathrm{FAlg}([\mathrm{Flat}(\mathcal{S})])$ is a map of finite algebraic structures.
+
+  Conversely, let $g : X \rightarrow Y$ be a map of finite algebraic structures.
+  Then $g$ is, in particular, a map of finite relational structures.
+  By \ref{prop:semantics-relational-sequents}, there exists a relational sequent $\mathcal{S}$ such that $[\mathcal{S}] \cong g$.
+  We can now invoke Lemma \ref{lem:unflatten} to obtain an algebraic sequent $\mathrm{Unflat}(\mathcal{S})$ such that $[\mathrm{Unflat}(\mathcal{S})] \cong g$.
+
+  \ref{itm:semantics-quotient-algebraic-sequent}.
+  Let $\mathcal{S} = \mathcal{F} \Rightarrow \mathcal{G}$ be a quotient relational sequent.
+  By Lemma \ref{lem:composition-sequent-morphisms}, we may assume that $\mathcal{G} = t_1 \equiv t_2$ for terms $t_1, t_2$ that also occur in the premise.
+  It follows that $v_\mathrm{Flat}(t_1)$ and $v_\mathrm{Flat}(t_2)$ occur in $\mathrm{Flat}(\mathcal{F})$.
+  Thus $\mathcal{S}' = \mathrm{Flat}(\mathcal{F})) \implies v_\mathrm{Flat}(t_1) \equiv v_\mathrm{Flat}(t_2)$ is a quotient relational sequent such that $[\mathcal{S}] = \mathrm{FAlg}([\mathcal{S}'])$.
+  By clause \ref{itm:semantics-quotient-relational-sequent} of Proposition \ref{prop:semantics-relational-sequents}, $[\mathcal{S}']$ is an effective epimorphism of relational structures.
+  Because the free algebra functor is a left adjoint, it preserves effective epimorphisms.
+  Thus $[\mathcal{S}]$ is an effective epimorphism.
+
+  \ref{itm:semantics-epi-algebraic-sequent}.
+  Let $\mathrm{Flat}(\mathcal{S}) = \mathcal{F} \Rightarrow \mathcal{G}$ be the flattening of an epi algebraic formula.
+  We need to show that $g = \mathrm{FAlg}([\mathcal{F} \Rightarrow \mathcal{G}])$ is an epimorphism in $\mathrm{Alg}$.
+
+  By Lemma \ref{lem:composition-sequent-morphisms}, we may without loss of generality assume that $\mathcal{G} = \mathcal{\phi}$ is a relational atom of one of the types as in Lemma \ref{lem:flattening-atoms}, where $\phi$ is the set of variables in $\mathcal{F}$.
+  In cases \ref{itm:flattened-predicate-case}, \ref{itm:flattened-defined-case} and \ref{itm:flattened-equals-case}, the map $[\mathcal{F} \Rightarrow \phi]$ is surjective. 
+  Because the free algebra functor preserves epimorphisms, this implies that $g$ is an epimorphism in $\mathrm{Alg}$.
+  In case \ref{itm:flattened-predicate-case}, $[\mathcal{F} \Rightarrow \phi]$ is a pushout of $[f \downarrow]$ in $\mathrm{Rel}$.
+  Since $[f \downarrow] = \mathrm{FAlg}([f \downarrow])$ is an epimorphism in $\mathrm{Alg}$ and pushouts preserve epimorphisms, it follows that also in this case $g$ is an epimorphism.
+
+  Conversely, let $g : X \rightarrow Y$ be an epimorphism of finite algebraic structures.
+  Let $g = g' h$ be the saturation of $g$.
+  Then $h$ is a relative $\mathrm{Tot}$-complex, hence $h$ is the colimit of a chain
+  \begin{equation}
+    X = X_0 \xrightarrow{h_0} X_1 \xrightarrow{h_1} X_2 \xrightarrow{h_2} \dots
+  \end{equation}
+  where each $h_n$ is a pushout
+  \begin{equation}
+    \begin{tikzcd}
+      \left[ v_1 \downarrow \land \dots \land v_n \downarrow \right] \arrow[r, "{[f_n \downarrow]}"] \arrow[d, "a"] & \left[ f_n(v_1, \dots, v_n) \downarrow \right] \arrow[d, "b"] \\
+      X_n \arrow[r, "h_n"] & X_{n + 1}
+    \end{tikzcd}
+  \end{equation}
+  of a totality sequent $f_n \downarrow$.
+
+  We claim that $h_n \cong [\mathcal{S}]$ for some epi algebraic sequent $\mathcal{S}$ for all $n \geq 0$.
+  To verify this, choose first an algebraic formula $\mathcal{F}$ such that $[\mathcal{F}] \cong X_n$.
+  A formula $\mathcal{F}$ with property exists because $X_n$ is finite.
+  The map $a$ corresponds to elements $x_1, \dots, x_n \in X$, and these elements correspond to terms $t_1, \dots, t_n$ that occur in $\phi$.
+  Now $h_n \cong [\mathcal{F} \Rightarrow f_n(t_1, \dots, t_n)\downarrow]$.
+
+  Let $g'_n : X_n \rightarrow \operatorname{colim}_i X_i \xrightarrow{h} Y$ for $n \geq 0$.
+  Because $Y$ is finite, the chain
+  \begin{equation}
+    \operatorname{Im} g'_0 \subseteq \operatorname{Im} g'_1 \subseteq \dots \subseteq Y
+  \end{equation}
+  becomes stationary, say for $n \geq n_0$, and then $\operatorname{Im} g'_{n_0} = \operatorname{Im} g'$.
+  $g$ is an epimorphism, hence $g'$ is a surjection by Proposition \todo{todo}, hence also $g'_{n_0} : X_{n_0} \rightarrow Y$ is a surjection.
+  Thus $g'_{n_0} \cong [\mathcal{S}] \cong [\mathrm{Unflat}(\mathcal{S})]$ for some surjective relational sequent $\mathcal{S}$.
+  Note that because $\mathcal{S}$ is surjective, the algebraic sequent $\mathrm{Unflat}(\mathcal{S})$ is epi.
+
+  We have thus decomposed $g$ as
+  \begin{equation}
+    X = X_0 \xrightarrow{h_0} X_1 \xrightarrow{h_1} X_2 \rightarrow{h_2} \dots \xrightarrow{h_{n_0} - 1} X_{n_0} \xrightarrow{g_{n_0}} Y
+  \end{equation}
+  where each map is of the form $[\mathcal{S}]$ for some epi algebraic sequent.
+  It follows that also $g = [\mathcal{S}]$ for some epi algebraic sequent $\mathcal{S}$.
+\end{proof}
+
+\subsection{Relational orthogonality classes as algebraic epi injectivity classes}
+
+\begin{proposition}
+  Let $\mathcal{S} = (S, R)$ be a relational signature.
+  Let $M$ be a set of finite relational $\mathcal{S}$-structures.
+  Then there exists an algebraic signature $\mathcal{S}' = (S, P \sqcup F)$ on the same set of sorts $S$ such that $P = R$ and a set $M'$ of epimorphisms of finite algebraic $\mathcal{S}'$-structures such that the forgetful functor $\mathrm{Alg}(\mathcal{S}') \rightarrow \mathrm{Rel}(\mathcal{S})$ restricts to an equivalence $M^\perp \simeq (M')^\pitchfork$.
+\end{proposition}
+\begin{proof}
+  Choosing a relational seuqent $\mathcal{S}_g : \mathcal{F}_g \Rightarrow \mathcal{G}_g$ such that $[\mathcal{S}_g] \cong g$ for each $g \in M$, we identify $M$ with a set of relational sequents.
+
+  Our set of function symbols $F$ is given by
+  \begin{equation}
+    F = \{ f_{\mathcal{S}, v} \mid \mathcal{S} : \mathcal{F} \Rightarrow \mathcal{G} \text{ is in } M \text{ and } v \text{ is a variable in } \mathcal{G} \}.
+  \end{equation}
+  Let $\mathcal{S} : A \Rightarrow B$ be in $M$ and let $v$ be a variable in $\mathcal{G}$.
+  Let $v_1, \dots, v_n$ be an enumeration of the variables in $A$, let $s_i$ be the sort of $v_i$ and let $s$ be the sort of $v$.
+  Then we define the signature of $f_{\mathcal{S}, v}$ by $f_{\mathcal{S}, v} : s_1 \times \dots \times s_n \rightarrow s$.
+
+  Note that each relation symbol in $\mathcal{S}$ corresponds to a predicate symbol in $\mathcal{S}'$.
+  We thus implicitly coerce relational $\mathcal{S}$-sequents to algebraic $\mathcal{S}'$-sequents (without invoking $\mathrm{Unflat}$).
+
+  Let $M'$ be the set containing the following algebraic sequents, for all $\mathcal{F} \Rightarrow \mathcal{G}$ in $M$:
+  \begin{enumerate}
+    \item
+      \label{itm:new-functions-satisfy}
+      The sequent $\mathcal{F} \Rightarrow \mathcal{G}'$, where $\mathcal{G}'$ is obtained from $\mathcal{G}$ by replacing each variable $v$ in $\mathcal{G}$ with $f_{\mathcal{S}, v}(v_1, \dots, v_n)$.
+    \item
+      \label{itm:new-functions-only-defined-if-premise}
+      The sequents
+      \begin{equation}
+        f_{\mathcal{S}, v}(v_1, \dots, v_n) \downarrow \Rightarrow \mathcal{F}
+      \end{equation}
+      for all variables $v$ in $\mathcal{G}$.
+    \item
+      \label{itm:new-functions-uniquely}
+      The sequents
+      \begin{equation}
+        \mathcal{F} \land \mathcal{G} \implies v \equiv f_{\mathcal{S}, v}(v_1, \dots, v_n)
+      \end{equation}
+      for all variables $v$ in $\mathcal{G}$.
+  \end{enumerate}
+  Clearly algebraic sequents in $M'$ are epi.
+
+  Now let $X$ be a relational $\mathcal{S}$-structure that satisfies all sequents in $M$.
+  We define an algebraic $\mathcal{S}'$-structure $X'$ on the underlying relational $\mathcal{S}$-structure $X$ by defining
+  \begin{equation}
+    f_{\mathcal{S}, v}(x_1, \dots, x_n) = x
+  \end{equation}
+  if the assignment $v_i \mapsto x_i$ defines an interpretation of $\mathcal{F}$ in $X$, and the unique extension to an interpretation of $\mathcal{G}$ maps $v$ to $x$.
+  Now clearly $X'$ satisfies all sequents in $M'$.
+  
+  Conversely let $X'$ be an algebraic $\mathcal{S}'$-structure satisfying all sequents in $M'$, let $X$ be the underlying relational $\mathcal{S}$-structure, and let $\mathcal{S} = \mathcal{F} \Rightarrow \mathcal{G}$ be a relational sequent in $M$.
+  Then by the algebraic sequent \ref{itm:new-functions-satisfy}, $X$ satisfies $\mathcal{S}$, and the algebraic sequent \ref{itm:new-functions-uniquely}, $X$ satisfies $\mathcal{S}$ uniquely.
+
+  Because of the sequents \ref{itm:new-functions-only-defined-if-premise}, the functions $X'_{f_{\mathcal{S}, v}}, X'_{f_{\mathcal{S}, v'}}$ have the same domain for all $v, v'$ in the premise of $\mathcal{S}$:
+  The set of tuples $(x_1, \dots, x_n)$ such that $v_i \mapsto x_i$ defines an interpretation of $\mathcal{F}$ in $X$.
+  Thus $X'$ is uniquely determined by $X$.
+
+  We have thus far shown that the forgetful functor restricts to a well-defined functor $(M'^\pitchfork) \rightarrow M^\perp$ that is essentially surjective (in fact, an isomorphism on objects).
+  Because every map of algebraic or relational structures is determined by its value on carriers, the forgetful functor is faithful.
+  To show that it is full, we need to convince ourselves that every map $X \rightarrow Y$ of relational $\mathcal{S}$-structures satisfying all sequents in $M$ lifts to a map $X' \rightarrow Y'$, where $X'$ and $Y'$ are the algebraic structures in $(M')^\pitchfork$ mapping to $X$ and $Y$.
+  This condition follows from uniqueness of lifts in diagrams of the form
+  \begin{equation}
+    \begin{tikzcd}
+      \left[ \mathcal{F} \right] \arrow[d, "{[\mathcal{S}]}"'] \arrow[r] & X \arrow[r] & Y \\
+      \left[ \mathcal{G} \right] \arrow[ur, dashed] \arrow[urr, dashed]
+    \end{tikzcd}
+  \end{equation}
+  for relational sequents $\mathcal{S} : \mathcal{F} \Rightarrow \mathcal{G}$ in $M$.
+\end{proof}
+
+% LATEX_TO_HTML_IGNORE
+\bibliographystyle{abbrvnat}
+% LATEX_TO_HTML_IGNORE
+\setcitestyle{authoryear,open={(},close={)}}
+% LATEX_TO_HTML_IGNORE
+\bibliography{main}
 
 \end{document}

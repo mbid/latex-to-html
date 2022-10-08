@@ -146,11 +146,9 @@ fn display_paragraph_part<'a>(
         use ParagraphPart::*;
         match part {
             InlineWhitespace(ws) => {
-                let newlines = ws.matches('\n').count();
-                if newlines > 0 {
-                    for _ in 0..newlines {
-                        write!(out, "\n")?;
-                    }
+                let has_newlines = ws.find('\n').is_some();
+                if has_newlines {
+                    write!(out, "\n")?;
                 } else if !ws.is_empty() {
                     write!(out, " ")?;
                 }
@@ -171,7 +169,6 @@ fn display_paragraph_part<'a>(
                 let child_displ = display_paragraph(data, child_paragraph);
                 write!(out, "<emph>{child_displ}</emph>")?;
             }
-            Comment(_) => {}
             Label(_) => {}
             Qed => {}
             Itemize(items) => {

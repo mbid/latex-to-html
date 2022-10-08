@@ -3,7 +3,7 @@ use nom::branch::alt;
 use nom::bytes::complete::{tag, take_while, take_while1};
 use nom::character::complete::{char, none_of, one_of};
 use nom::combinator::{cut, opt};
-use nom::multi::{count, many0, many1};
+use nom::multi::{many0, many1};
 use nom::sequence::{pair, tuple};
 use nom::{IResult, Parser};
 
@@ -23,6 +23,11 @@ fn non_breaking_ws_char(i: &str) -> Result<()> {
     Ok((i, ()))
 }
 
+fn non_breaking_ws(i: &str) -> Result<()> {
+    let (i, _) = many0(non_breaking_ws_char)(i)?;
+    Ok((i, ()))
+}
+
 fn line_break(i: &str) -> Result<()> {
     let (i, _) = char('\n')(i)?;
     Ok((i, ()))
@@ -36,11 +41,42 @@ fn ws_char(i: &str) -> Result<()> {
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct InlineWhitespace<'a>(&'a str);
 
+fn comment(i: &str) -> Result<()> {
+    let (i, _) = char('%')(i)?;
+    let (i, _) = take_while(|c| c != '\n')(i)?;
+    Ok((i, ()))
+}
+
+fn ignore(i: &str) -> Result<()> {
+    let (i, _) = char('%')(i)?;
+    let (i, _) = non_breaking_ws(i)?;
+    let (i, _) = tag("LATEX_TO_HTML_IGNORE")(i)?;
+    let (i, _) = non_breaking_ws(i)?;
+    let (i, _) = cut(|i| {
+        let (i, _) = char('\n')(i)?;
+        let (i, _) = take_while(|c| c != '\n')(i)?;
+        Ok((i, ()))
+    })(i)?;
+
+    Ok((i, ()))
+}
+
 pub fn inline_ws(i: &str) -> Result<InlineWhitespace> {
     let before = i;
 
-    let (i, _) = many0(non_breaking_ws_char)(i)?;
-    let (i, _) = opt(pair(line_break, many0(non_breaking_ws_char)))(i)?;
+    let (i, _) = non_breaking_ws(i)?;
+    let (i, _) = opt(comment)(i)?;
+    let (i, lb) = opt(line_break)(i)?;
+    if let None = lb {
+        return Ok((i, InlineWhitespace(consumed_slice(before, i))));
+    }
+
+    let (i, _) = many0(tuple((
+        non_breaking_ws,
+        alt((ignore, comment)),
+        opt(line_break),
+    )))(i)?;
+    let (i, _) = non_breaking_ws(i)?;
 
     Ok((i, InlineWhitespace(consumed_slice(before, i))))
 }
@@ -48,53 +84,9 @@ pub fn inline_ws(i: &str) -> Result<InlineWhitespace> {
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct ParagraphBreak<'a>(&'a str);
 
-pub fn paragraph_break(i: &str) -> Result<ParagraphBreak> {
-    let before = i;
-
-    let (i, _) = count(pair(many0(non_breaking_ws_char), line_break), 2)(i)?;
-    let (i, _) = many0(non_breaking_ws_char)(i)?;
-
-    Ok((i, ParagraphBreak(consumed_slice(before, i))))
-}
-
 pub fn any_ws(i: &str) -> Result<()> {
-    let (i, _) = many0(ws_char)(i)?;
+    let (i, _) = many0(alt((ignore, comment, ws_char)))(i)?;
     Ok((i, ()))
-}
-
-#[test]
-fn test_whitespace() {
-    assert_eq!(inline_ws(""), Ok(("", InlineWhitespace(""))));
-    assert_eq!(inline_ws(" \t"), Ok(("", InlineWhitespace(" \t"))));
-    assert_eq!(inline_ws("\t "), Ok(("", InlineWhitespace("\t "))));
-    assert_eq!(inline_ws("\t \n"), Ok(("", InlineWhitespace("\t \n"))));
-    assert_eq!(inline_ws("\t \n  "), Ok(("", InlineWhitespace("\t \n  "))));
-    assert_eq!(
-        inline_ws("\t \n \n"),
-        Ok(("\n", InlineWhitespace("\t \n ")))
-    );
-    assert_eq!(
-        inline_ws("\t \n asdf"),
-        Ok(("asdf", InlineWhitespace("\t \n ")))
-    );
-
-    assert!(paragraph_break("").is_err());
-    assert!(paragraph_break("\t \n").is_err());
-    assert_eq!(
-        paragraph_break("\t \n \n"),
-        Ok(("", ParagraphBreak("\t \n \n")))
-    );
-    assert_eq!(
-        paragraph_break("\t \n \n \t"),
-        Ok(("", ParagraphBreak("\t \n \n \t")))
-    );
-    assert_eq!(
-        paragraph_break("\t \n \n asdf"),
-        Ok(("asdf", ParagraphBreak("\t \n \n ")))
-    );
-
-    assert_eq!(any_ws(""), Ok(("", ())));
-    assert_eq!(any_ws("\t\n   \t\n\n\t"), Ok(("", ())));
 }
 
 pub fn command_no_args<'a>(name: &'static str) -> impl Fn(&'a str) -> Result<'a, ()> {
@@ -360,11 +352,11 @@ pub fn emph(i: &str) -> Result<Emph> {
     Ok((i, Emph(par)))
 }
 
-pub fn comment(i: &str) -> Result<ParagraphPart> {
-    let (i, _) = char('%')(i)?;
-    let (i, comment) = take_while(|c| c != '\n')(i)?;
-    Ok((i, ParagraphPart::Comment(comment)))
-}
+//pub fn comment(i: &str) -> Result<ParagraphPart> {
+//    let (i, _) = char('%')(i)?;
+//    let (i, comment) = take_while(|c| c != '\n')(i)?;
+//    Ok((i, ParagraphPart::Comment(comment)))
+//}
 
 pub fn paragraph_label(i: &str) -> Result<ParagraphPart> {
     command("label", label_value)
@@ -430,7 +422,7 @@ pub fn paragraph<'a>(i: &'a str) -> Result<Paragraph<'a>> {
             ref_command,
             eqref,
             emph,
-            comment,
+            // comment,
             paragraph_label,
             paragraph_qed,
             itemize,
