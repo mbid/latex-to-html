@@ -42,7 +42,6 @@ pub fn latex_to_svg(preamble: &str, latex: &str) -> Result<String, LatexToSvgErr
 
     let mut pdf_latex_cmd = Command::new("pdflatex");
     pdf_latex_cmd.current_dir(tmp_dir.path());
-
     pdf_latex_cmd.arg("-interaction=nonstopmode");
     pdf_latex_cmd.arg(&latex_file_path);
     let pdf_latex_output = pdf_latex_cmd.output()?;
@@ -51,6 +50,7 @@ pub fn latex_to_svg(preamble: &str, latex: &str) -> Result<String, LatexToSvgErr
     }
 
     let mut pdf_crop_cmd = Command::new("pdfcrop");
+    pdf_crop_cmd.current_dir(tmp_dir.path());
     pdf_crop_cmd.arg(&pdf_file_path);
     pdf_crop_cmd.arg(&pdf_crop_file_path);
     let pdf_crop_output = pdf_crop_cmd.output()?;
@@ -59,6 +59,7 @@ pub fn latex_to_svg(preamble: &str, latex: &str) -> Result<String, LatexToSvgErr
     }
 
     let mut pdf2svg_cmd = Command::new("pdf2svg");
+    pdf2svg_cmd.current_dir(tmp_dir.path());
     pdf2svg_cmd.arg(&pdf_crop_file_path);
     pdf2svg_cmd.arg(&svg_file_path);
     let pdf2svg_output = pdf2svg_cmd.output()?;
