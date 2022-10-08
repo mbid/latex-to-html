@@ -291,13 +291,29 @@ fn write_index(out: &mut impl Write, doc: &Document, data: &EmitData) -> Result 
             Author(_) => (),
             Date() => (),
             Maketitle() => (),
-            Section { name, .. } => {
-                write!(out, "<h2>\n")?;
+            Section { name, label } => {
+                let label = display_label_id_attr(*label);
+                write!(out, "<h2{label}>\n")?;
+                let number = data
+                    .numbering
+                    .get(&std::ptr::addr_of!(*part))
+                    .map(|s| s.as_str());
+                if let Some(number) = number {
+                    write!(out, "{number} ")?;
+                }
                 write!(out, "{}", display_paragraph(data, name))?;
                 write!(out, "</h2>\n")?;
             }
-            Subsection { name, .. } => {
-                write!(out, "<h3>\n")?;
+            Subsection { name, label } => {
+                let label = display_label_id_attr(*label);
+                write!(out, "<h3{label}>\n")?;
+                let number = data
+                    .numbering
+                    .get(&std::ptr::addr_of!(*part))
+                    .map(|s| s.as_str());
+                if let Some(number) = number {
+                    write!(out, "{number} ")?;
+                }
                 write!(out, "{}", display_paragraph(data, name))?;
                 write!(out, "</h3>\n")?;
             }
@@ -421,12 +437,26 @@ pub fn assign_label_names<'a>(
 ) -> HashMap<&'a str, String> {
     let mut names = HashMap::new();
     for part in doc.parts.iter() {
-        if let DocumentPart::TheoremLike {
-            label: Some(label), ..
-        } = part
-        {
-            let number = numbering.get(&std::ptr::addr_of!(*part)).unwrap().clone();
-            names.insert(*label, number);
+        match part {
+            DocumentPart::TheoremLike {
+                label: Some(label), ..
+            } => {
+                let number = numbering.get(&std::ptr::addr_of!(*part)).unwrap().clone();
+                names.insert(*label, number);
+            }
+            DocumentPart::Section {
+                label: Some(label), ..
+            } => {
+                let number = numbering.get(&std::ptr::addr_of!(*part)).unwrap().clone();
+                names.insert(*label, number);
+            }
+            DocumentPart::Subsection {
+                label: Some(label), ..
+            } => {
+                let number = numbering.get(&std::ptr::addr_of!(*part)).unwrap().clone();
+                names.insert(*label, number);
+            }
+            _ => (),
         }
     }
     names

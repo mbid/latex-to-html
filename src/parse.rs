@@ -541,12 +541,22 @@ pub fn maketitle<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
 
 pub fn section<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
     let (i, name) = command("section", paragraph)(i)?;
-    Ok((i, DocumentPart::Section { name, label: None }))
+    let (i, label) = opt(|i| {
+        let (i, _) = any_ws(i)?;
+        let (i, val) = command("label", label_value)(i)?;
+        Ok((i, val))
+    })(i)?;
+    Ok((i, DocumentPart::Section { name, label }))
 }
 
 pub fn subsection<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
     let (i, name) = command("subsection", paragraph)(i)?;
-    Ok((i, DocumentPart::Subsection { name, label: None }))
+    let (i, label) = opt(|i| {
+        let (i, _) = any_ws(i)?;
+        let (i, val) = command("label", label_value)(i)?;
+        Ok((i, val))
+    })(i)?;
+    Ok((i, DocumentPart::Subsection { name, label }))
 }
 
 pub fn abstract_env<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
