@@ -120,19 +120,22 @@ fn display_math<'a>(preamble: &'a str, math: Math<'a>) -> impl 'a + Display {
 
 struct EmitData<'a> {
     preamble: &'a str,
-    // The numbering assigned to theorem-like document parts.
-    theorem_like_numbers: HashMap<*const DocumentPart<'a>, usize>,
+    // The number strings assigned to theorem-like document parts:
+    // - TheoremLike
+    // - Section
+    // - Subsection
+    numbering: HashMap<*const DocumentPart<'a>, String>,
     // The text by which references should refer to what they are referencing.
     label_names: HashMap<&'a str, String>,
 }
 
 impl<'a> EmitData<'a> {
     fn new(doc: &'a Document<'a>) -> Self {
-        let theorem_like_numbers = assign_theorem_like_numbers(doc);
-        let label_names = assign_label_names(doc, &theorem_like_numbers);
+        let numbering = assign_numberings(doc);
+        let label_names = assign_label_names(doc, &numbering);
         EmitData {
             preamble: &doc.preamble,
-            theorem_like_numbers,
+            numbering,
             label_names,
         }
     }
@@ -248,7 +251,7 @@ fn display_label_id_attr(label_value: Option<&str>) -> impl '_ + Display {
 fn display_theorem_header<'a>(
     data: &'a EmitData,
     name: &'a Paragraph<'a>,
-    number: Option<usize>,
+    number: Option<&'a str>,
 ) -> impl 'a + Display {
     DisplayFn(move |out: &mut Formatter| {
         write!(out, "<h4>")?;
@@ -318,9 +321,9 @@ fn write_index(out: &mut impl Write, doc: &Document, data: &EmitData) -> Result 
                     .unwrap();
                 let label = display_label_id_attr(*label);
                 let number = data
-                    .theorem_like_numbers
+                    .numbering
                     .get(&std::ptr::addr_of!(*part))
-                    .copied();
+                    .map(|s| s.as_str());
                 let header = display_theorem_header(data, &theorem_like_config.name, number);
                 writedoc! {out, "
                     <div{label}>
@@ -386,15 +389,27 @@ pub fn display_svg_style<'a>(infos: &'a HashMap<Math<'a>, MathSvgInfo>) -> impl 
     })
 }
 
-pub fn assign_theorem_like_numbers<'a>(
-    doc: &Document<'a>,
-) -> HashMap<*const DocumentPart<'a>, usize> {
-    let mut map: HashMap<*const DocumentPart<'a>, usize> = HashMap::new();
-    let mut next = 1;
+pub fn assign_numberings<'a>(doc: &Document<'a>) -> HashMap<*const DocumentPart<'a>, String> {
+    let mut map: HashMap<*const DocumentPart<'a>, String> = HashMap::new();
+    let mut current_theorem_like = 0;
+    let mut current_section = 0;
+    let mut current_subsection = 0;
     for part in doc.parts.iter() {
-        if let DocumentPart::TheoremLike { .. } = part {
-            map.insert(part, next);
-            next += 1;
+        match part {
+            DocumentPart::TheoremLike { .. } => {
+                current_theorem_like += 1;
+                map.insert(part, current_theorem_like.to_string());
+            }
+            DocumentPart::Section(..) => {
+                current_section += 1;
+                current_subsection = 0;
+                map.insert(part, current_section.to_string());
+            }
+            DocumentPart::Subsection(..) => {
+                current_subsection += 1;
+                map.insert(part, format!("{current_section}.{current_subsection}"));
+            }
+            _ => (),
         }
     }
     map
@@ -402,7 +417,7 @@ pub fn assign_theorem_like_numbers<'a>(
 
 pub fn assign_label_names<'a>(
     doc: &Document<'a>,
-    numbers: &HashMap<*const DocumentPart, usize>,
+    numbering: &HashMap<*const DocumentPart, String>,
 ) -> HashMap<&'a str, String> {
     let mut names = HashMap::new();
     for part in doc.parts.iter() {
@@ -410,8 +425,8 @@ pub fn assign_label_names<'a>(
             label: Some(label), ..
         } = part
         {
-            let number = numbers.get(&std::ptr::addr_of!(*part)).copied().unwrap();
-            names.insert(*label, number.to_string());
+            let number = numbering.get(&std::ptr::addr_of!(*part)).unwrap().clone();
+            names.insert(*label, number);
         }
     }
     names
