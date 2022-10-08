@@ -1,3 +1,4 @@
+use crate::ast::*;
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take_while, take_while1};
 use nom::character::complete::{char, none_of, one_of};
@@ -5,8 +6,6 @@ use nom::combinator::{cut, opt};
 use nom::multi::{count, many0, many1};
 use nom::sequence::{pair, tuple};
 use nom::{IResult, Parser};
-
-use crate::ast::*;
 
 type Error<'a> = nom::error::Error<&'a str>;
 
@@ -342,7 +341,7 @@ pub fn mathpar(i: &str) -> Result<Math> {
 }
 
 pub fn label_value(i: &str) -> Result<&str> {
-    take_while1(|c| c != '{' && c != '}')(i)
+    take_while1(|c: char| "-_:".find(c).is_some() || c.is_ascii_alphanumeric())(i)
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -380,7 +379,7 @@ pub fn paragraph_qed(i: &str) -> Result<ParagraphPart> {
 
 pub fn eqref(i: &str) -> Result<ParagraphPart> {
     let (i, val) = command("eqref", label_value)(i)?;
-    Ok((i, ParagraphPart::Eqref(val)))
+    Ok((i, ParagraphPart::Ref(val)))
 }
 
 pub fn list_item(i: &str) -> Result<Vec<Paragraph>> {
@@ -573,7 +572,7 @@ pub fn label<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
 }
 
 pub fn theorem_like<'a, 'b>(
-    configs: &'b [TheoremLikeConfig<'b>],
+    configs: &'b [TheoremLikeConfig<'a>],
     i: &'a str,
 ) -> Result<'a, DocumentPart<'a>> {
     let (first, tail) = match configs {
@@ -583,21 +582,29 @@ pub fn theorem_like<'a, 'b>(
         [first, tail @ ..] => (first, tail),
     };
 
-    let head_parser = |i: &'a str| {
-        let (i, content) = dyn_env(tag(first.tag), paragraphs0)(i)?;
+    let head_content_parser = |i: &'a str| {
+        let (i, label) = opt(command("label", label_value))(i)?;
+        let (i, _) = inline_ws(i)?;
+        let (i, content) = paragraphs0(i)?;
         Ok((
             i,
             DocumentPart::TheoremLike {
-                tag: "theorem",
+                tag: first.tag,
+                label,
                 content,
             },
         ))
+    };
+    let head_parser = |i: &'a str| {
+        let (i, doc_part) = dyn_env(tag(first.tag), head_content_parser)(i)?;
+        Ok((i, doc_part))
     };
 
     let tail_parser: Box<dyn Fn(&'a str) -> Result<'a, DocumentPart<'a>>> =
         Box::new(move |i| theorem_like(tail, i));
 
-    alt((head_parser, tail_parser))(i)
+    let (i, doc_part) = alt((head_parser, tail_parser))(i)?;
+    Ok((i, doc_part))
 }
 
 pub fn proof<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
@@ -652,6 +659,7 @@ pub fn document<'a>(i: &'a str) -> Result<Document<'a>> {
             config,
             preamble,
             parts,
+            label_names: None,
         },
     ))
 }

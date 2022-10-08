@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum Math<'a> {
     Inline(&'a str),
@@ -11,7 +13,6 @@ pub enum ParagraphPart<'a> {
     TextToken(&'a str),
     Math(Math<'a>),
     Ref(&'a str),
-    Eqref(&'a str),
     Emph(Paragraph<'a>),
     Comment(&'a str),
     Label(&'a str),
@@ -42,6 +43,7 @@ pub enum DocumentPart<'a> {
     TheoremLike {
         tag: &'a str,
         content: Vec<Paragraph<'a>>,
+        label: Option<&'a str>,
     },
     Proof(Vec<Paragraph<'a>>),
     Label(&'a str),
@@ -90,6 +92,7 @@ pub struct Document<'a> {
     pub preamble: &'a str,
     pub parts: Vec<DocumentPart<'a>>,
     pub config: DocumentConfig<'a>,
+    pub label_names: Option<HashMap<&'a str, String>>,
 }
 
 pub trait Syntax {
@@ -112,7 +115,6 @@ fn for_each_math_paragraph_part_impl<'a>(
         TextToken(_) => (),
         Math(math) => math.for_each_math(f),
         Ref(_) => (),
-        Eqref(_) => (),
         Emph(par) => {
             for part in par {
                 for_each_math_paragraph_part_impl(part, f);
