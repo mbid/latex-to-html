@@ -256,54 +256,6 @@ pub fn write_index(out: &mut impl Write, doc: &Document) -> Result {
                     </div>
                 "}?;
             }
-            Proposition(ps) => {
-                write!(out, "<h4>Proposition</h4>\n")?;
-                for p in ps {
-                    write!(out, "<p>\n")?;
-                    write!(out, "{}", display_paragraph(preamble, p))?;
-                    write!(out, "<p>\n")?;
-                }
-            }
-            Definition(ps) => {
-                write!(out, "<h4>Definition</h4>\n")?;
-                for p in ps {
-                    write!(out, "<p>\n")?;
-                    write!(out, "{}", display_paragraph(preamble, p))?;
-                    write!(out, "<p>\n")?;
-                }
-            }
-            Lemma(ps) => {
-                write!(out, "<h4>Lemma</h4>\n")?;
-                for p in ps {
-                    write!(out, "<p>\n")?;
-                    write!(out, "{}", display_paragraph(preamble, p))?;
-                    write!(out, "<p>\n")?;
-                }
-            }
-            Remark(ps) => {
-                write!(out, "<h4>Remark</h4>\n")?;
-                for p in ps {
-                    write!(out, "<p>\n")?;
-                    write!(out, "{}", display_paragraph(preamble, p))?;
-                    write!(out, "<p>\n")?;
-                }
-            }
-            Corollary(ps) => {
-                write!(out, "<h4>Corollary</h4>\n")?;
-                for p in ps {
-                    write!(out, "<p>\n")?;
-                    write!(out, "{}", display_paragraph(preamble, p))?;
-                    write!(out, "<p>\n")?;
-                }
-            }
-            Theorem(ps) => {
-                write!(out, "<h4>Theorem</h4>\n")?;
-                for p in ps {
-                    write!(out, "<p>\n")?;
-                    write!(out, "{}", display_paragraph(preamble, p))?;
-                    write!(out, "<p>\n")?;
-                }
-            }
             Proof(ps) => {
                 write!(out, "<emph>Proof.</emph>\n")?;
                 for p in ps {

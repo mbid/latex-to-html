@@ -46,12 +46,6 @@ pub enum DocumentPart<'a> {
     Subsection(Paragraph<'a>),
     Abstract(Vec<Paragraph<'a>>),
     TheoremLike(TheoremLike<'a>),
-    Proposition(Vec<Paragraph<'a>>),
-    Definition(Vec<Paragraph<'a>>),
-    Lemma(Vec<Paragraph<'a>>),
-    Remark(Vec<Paragraph<'a>>),
-    Corollary(Vec<Paragraph<'a>>),
-    Theorem(Vec<Paragraph<'a>>),
     Proof(Vec<Paragraph<'a>>),
     Label(&'a str),
 }
@@ -179,36 +173,6 @@ impl<'a> Syntax for DocumentPart<'a> {
                 theorem_like
                     .content
                     .iter()
-                    .flatten()
-                    .for_each(|part| part.for_each_math(&mut f));
-            }
-            Proposition(pars) => {
-                pars.iter()
-                    .flatten()
-                    .for_each(|part| part.for_each_math(&mut f));
-            }
-            Definition(pars) => {
-                pars.iter()
-                    .flatten()
-                    .for_each(|part| part.for_each_math(&mut f));
-            }
-            Lemma(pars) => {
-                pars.iter()
-                    .flatten()
-                    .for_each(|part| part.for_each_math(&mut f));
-            }
-            Remark(pars) => {
-                pars.iter()
-                    .flatten()
-                    .for_each(|part| part.for_each_math(&mut f));
-            }
-            Corollary(pars) => {
-                pars.iter()
-                    .flatten()
-                    .for_each(|part| part.for_each_math(&mut f));
-            }
-            Theorem(pars) => {
-                pars.iter()
                     .flatten()
                     .for_each(|part| part.for_each_math(&mut f));
             }

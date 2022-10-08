@@ -572,50 +572,6 @@ pub fn label<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
         .parse(i)
 }
 
-pub fn proposition<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
-    let (i, content) = env("proposition", paragraphs0)(i)?;
-    Ok((
-        i,
-        DocumentPart::TheoremLike(TheoremLike {
-            tag: "proposition",
-            content,
-        }),
-    ))
-}
-
-pub fn definition<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
-    env("definition", paragraphs0)
-        .map(DocumentPart::Definition)
-        .parse(i)
-}
-
-pub fn lemma<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
-    env("lemma", paragraphs0).map(DocumentPart::Lemma).parse(i)
-}
-
-pub fn remark<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
-    env("remark", paragraphs0)
-        .map(DocumentPart::Remark)
-        .parse(i)
-}
-
-pub fn corollary<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
-    env("corollary", paragraphs0)
-        .map(DocumentPart::Corollary)
-        .parse(i)
-}
-
-pub fn theorem<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
-    let (i, content) = env("theorem", paragraphs0)(i)?;
-    Ok((
-        i,
-        DocumentPart::TheoremLike(TheoremLike {
-            tag: "theorem",
-            content,
-        }),
-    ))
-}
-
 pub fn theorem_like<'a, 'b>(
     configs: &'b [TheoremLikeConfig<'b>],
     i: &'a str,
