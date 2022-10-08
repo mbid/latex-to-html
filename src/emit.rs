@@ -69,7 +69,7 @@ fn create_math_svg_files<'a>(root: &'a Path, doc: &'a Document) -> HashMap<Math<
 
         let mut info = MathSvgInfo {
             y_em_offset: None,
-            path: PathBuf::from(format!("{}", display_svg_math_path(doc.preamble, math))),
+            path: PathBuf::from(format!("{}", display_svg_math_path(&doc.preamble, math))),
         };
         let path = root.join(&info.path);
         if path.exists() {
@@ -83,16 +83,16 @@ fn create_math_svg_files<'a>(root: &'a Path, doc: &'a Document) -> HashMap<Math<
                     svg,
                     height_em,
                     baseline_em,
-                } = inline_math_to_svg(doc.preamble, src).unwrap();
+                } = inline_math_to_svg(&doc.preamble, src).unwrap();
                 info.y_em_offset = Some(height_em - baseline_em);
                 svg
             }
             Display(src) => {
-                let DisplayMathSvg(svg) = display_math_to_svg(doc.preamble, src).unwrap();
+                let DisplayMathSvg(svg) = display_math_to_svg(&doc.preamble, src).unwrap();
                 svg
             }
             Mathpar(src) => {
-                let DisplayMathSvg(svg) = mathpar_math_to_svg(doc.preamble, src).unwrap();
+                let DisplayMathSvg(svg) = mathpar_math_to_svg(&doc.preamble, src).unwrap();
                 svg
             }
         };
@@ -127,11 +127,11 @@ struct EmitData<'a> {
 }
 
 impl<'a> EmitData<'a> {
-    fn new(doc: &Document<'a>) -> Self {
+    fn new(doc: &'a Document<'a>) -> Self {
         let theorem_like_numbers = assign_theorem_like_numbers(doc);
         let label_names = assign_label_names(doc, &theorem_like_numbers);
         EmitData {
-            preamble: doc.preamble,
+            preamble: &doc.preamble,
             theorem_like_numbers,
             label_names,
         }

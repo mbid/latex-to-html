@@ -88,7 +88,7 @@ impl Default for DocumentConfig<'static> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Document<'a> {
-    pub preamble: &'a str,
+    pub preamble: String,
     pub parts: Vec<DocumentPart<'a>>,
     pub config: DocumentConfig<'a>,
     pub label_names: Option<HashMap<&'a str, String>>,

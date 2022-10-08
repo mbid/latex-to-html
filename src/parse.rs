@@ -634,10 +634,33 @@ pub fn documentclass<'a>(i: &'a str) -> Result<()> {
     Ok((i, ()))
 }
 
+pub fn preamble_lines<'a>(mut i: &'a str) -> Result<'a, Vec<&'a str>> {
+    let before = i;
+    let mut result = Vec::new();
+
+    loop {
+        if let (j, Some(_)) = opt(pair(non_breaking_ws, ignore))(i)? {
+            i = j;
+        } else {
+            let (j, _) = take_while(|c| c != '\n')(i)?;
+            result.push(consumed_slice(i, j));
+            i = j;
+        }
+
+        if let (j, Some(_)) = opt(char('\n'))(i)? {
+            i = j;
+            continue;
+        }
+
+        return Ok((consumed_slice(before, i), result));
+    }
+}
+
 pub fn document<'a>(i: &'a str) -> Result<Document<'a>> {
     let (i, _) = any_ws(i)?;
     let (i, _) = documentclass(i)?;
     let (i, (preamble, _)) = take_until(command("begin", tag("document")))(i)?;
+    let preamble = preamble_lines(preamble).unwrap().1.join("\n");
     let config = DocumentConfig::default();
     let (i, _) = any_ws(i)?;
     let document_part = |i: &'a str| document_part(&config, i);
