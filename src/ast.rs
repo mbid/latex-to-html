@@ -36,8 +36,14 @@ pub enum DocumentPart<'a> {
     Author(Paragraph<'a>),
     Date(),
     Maketitle(),
-    Section(Paragraph<'a>),
-    Subsection(Paragraph<'a>),
+    Section {
+        label: Option<&'a str>,
+        name: Paragraph<'a>,
+    },
+    Subsection {
+        label: Option<&'a str>,
+        name: Paragraph<'a>,
+    },
     Abstract(Vec<Paragraph<'a>>),
     TheoremLike {
         tag: &'a str,
@@ -155,11 +161,11 @@ impl<'a> Syntax for DocumentPart<'a> {
             }
             Date() => (),
             Maketitle() => (),
-            Section(par) => {
-                par.iter().for_each(|part| part.for_each_math(&mut f));
+            Section { name, .. } => {
+                name.iter().for_each(|part| part.for_each_math(&mut f));
             }
-            Subsection(par) => {
-                par.iter().for_each(|part| part.for_each_math(&mut f));
+            Subsection { name, .. } => {
+                name.iter().for_each(|part| part.for_each_math(&mut f));
             }
             Abstract(pars) => {
                 pars.iter()

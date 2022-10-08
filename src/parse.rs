@@ -540,15 +540,13 @@ pub fn maketitle<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
 }
 
 pub fn section<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
-    command("section", paragraph)
-        .map(DocumentPart::Section)
-        .parse(i)
+    let (i, name) = command("section", paragraph)(i)?;
+    Ok((i, DocumentPart::Section { name, label: None }))
 }
 
 pub fn subsection<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
-    command("subsection", paragraph)
-        .map(DocumentPart::Subsection)
-        .parse(i)
+    let (i, name) = command("subsection", paragraph)(i)?;
+    Ok((i, DocumentPart::Subsection { name, label: None }))
 }
 
 pub fn abstract_env<'a>(i: &'a str) -> Result<DocumentPart<'a>> {

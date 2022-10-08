@@ -291,14 +291,14 @@ fn write_index(out: &mut impl Write, doc: &Document, data: &EmitData) -> Result 
             Author(_) => (),
             Date() => (),
             Maketitle() => (),
-            Section(p) => {
+            Section { name, .. } => {
                 write!(out, "<h2>\n")?;
-                write!(out, "{}", display_paragraph(data, p))?;
+                write!(out, "{}", display_paragraph(data, name))?;
                 write!(out, "</h2>\n")?;
             }
-            Subsection(p) => {
+            Subsection { name, .. } => {
                 write!(out, "<h3>\n")?;
-                write!(out, "{}", display_paragraph(data, p))?;
+                write!(out, "{}", display_paragraph(data, name))?;
                 write!(out, "</h3>\n")?;
             }
             Abstract(ps) => {
@@ -400,12 +400,12 @@ pub fn assign_numberings<'a>(doc: &Document<'a>) -> HashMap<*const DocumentPart<
                 current_theorem_like += 1;
                 map.insert(part, current_theorem_like.to_string());
             }
-            DocumentPart::Section(..) => {
+            DocumentPart::Section { .. } => {
                 current_section += 1;
                 current_subsection = 0;
                 map.insert(part, current_section.to_string());
             }
-            DocumentPart::Subsection(..) => {
+            DocumentPart::Subsection { .. } => {
                 current_subsection += 1;
                 map.insert(part, format!("{current_section}.{current_subsection}"));
             }
