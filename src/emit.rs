@@ -233,11 +233,11 @@ pub fn write_index(out: &mut impl Write, doc: &Document) -> Result {
                     write!(out, "<p>\n")?;
                 }
             }
-            TheoremLike(theorem_like) => {
+            TheoremLike { tag, content } => {
                 let theorem_like_config = config
                     .theorem_like_configs
                     .iter()
-                    .find(|config| config.tag == theorem_like.tag)
+                    .find(|config| &config.tag == tag)
                     .unwrap();
                 let name = display_paragraph(preamble, &theorem_like_config.name);
                 writedoc! {out, "
@@ -246,7 +246,7 @@ pub fn write_index(out: &mut impl Write, doc: &Document) -> Result {
                     {name}
                     </h4>
                 "}?;
-                for parag in theorem_like.content.iter() {
+                for parag in content.iter() {
                     let parag_displ = display_paragraph(preamble, parag);
                     writedoc! {out, "
                         {parag_displ}

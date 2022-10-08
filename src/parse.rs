@@ -587,10 +587,10 @@ pub fn theorem_like<'a, 'b>(
         let (i, content) = dyn_env(tag(first.tag), paragraphs0)(i)?;
         Ok((
             i,
-            DocumentPart::TheoremLike(TheoremLike {
+            DocumentPart::TheoremLike {
                 tag: "theorem",
                 content,
-            }),
+            },
         ))
     };
 

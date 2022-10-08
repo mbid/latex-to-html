@@ -30,12 +30,6 @@ pub struct TheoremLikeConfig<'a> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TheoremLike<'a> {
-    pub tag: &'a str,
-    pub content: Vec<Paragraph<'a>>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DocumentPart<'a> {
     FreeParagraph(Paragraph<'a>),
     Title(Paragraph<'a>),
@@ -45,7 +39,10 @@ pub enum DocumentPart<'a> {
     Section(Paragraph<'a>),
     Subsection(Paragraph<'a>),
     Abstract(Vec<Paragraph<'a>>),
-    TheoremLike(TheoremLike<'a>),
+    TheoremLike {
+        tag: &'a str,
+        content: Vec<Paragraph<'a>>,
+    },
     Proof(Vec<Paragraph<'a>>),
     Label(&'a str),
 }
@@ -169,9 +166,8 @@ impl<'a> Syntax for DocumentPart<'a> {
                     .flatten()
                     .for_each(|part| part.for_each_math(&mut f));
             }
-            TheoremLike(theorem_like) => {
-                theorem_like
-                    .content
+            TheoremLike { content, .. } => {
+                content
                     .iter()
                     .flatten()
                     .for_each(|part| part.for_each_math(&mut f));
