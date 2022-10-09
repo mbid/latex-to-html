@@ -540,8 +540,20 @@ pub fn assign_label_names<'a>(
 }
 
 const STYLE: &'static str = indoc! {"
+    body {
+        max-width: 600px;
+        margin: auto;
+    }
     h4 {
         display: inline;
+    }
+
+    .theorem-like {
+        margin-top: 0.5em;
+    }
+
+    .proof {
+        margin-top: 0.5em;
     }
 
     .inline-math {
