@@ -332,8 +332,43 @@ fn display_theorem_header<'a>(
     })
 }
 
+fn display_title<'a>(title: Option<&'a Paragraph<'a>>) -> impl 'a + Display {
+    DisplayFn(move |out: &mut Formatter| {
+        match title {
+            None => (),
+            Some(parag) => {
+                for part in parag {
+                    use ParagraphPart::*;
+                    match part {
+                        TextToken(tok) => {
+                            write!(out, "{tok}")?;
+                        }
+                        InlineWhitespace(ws) => {
+                            if ws.len() > 0 {
+                                write!(out, " ")?;
+                            }
+                        }
+                        Math(_) | Ref(_) | Emph(_) | Qed | Enumerate(_) | Itemize(_) | Todo => {
+                            panic!("Invalid node in title");
+                        }
+                    }
+                }
+            }
+        }
+        Ok(())
+    })
+}
+
 fn write_index(out: &mut impl Write, doc: &Document, data: &EmitData) -> Result {
-    let head = display_head("Render experiment");
+    let title: Option<&Paragraph> = doc.parts.iter().find_map(|part| {
+        if let DocumentPart::Title(title) = part {
+            Some(title)
+        } else {
+            None
+        }
+    });
+
+    let head = display_head(display_title(title));
     writedoc! {out, r#"
         <!DOCTYPE html>
         <html lang="en">
@@ -352,7 +387,14 @@ fn write_index(out: &mut impl Write, doc: &Document, data: &EmitData) -> Result 
             Title(_) => (),
             Author(_) => (),
             Date() => (),
-            Maketitle() => (),
+            Maketitle() => {
+                if title.is_some() {
+                    let title = display_title(title);
+                    writedoc! {out, r#"
+                        <h1>{title}</h1>
+                    "#}?;
+                }
+            }
             Section { name, label } => {
                 let label = display_label_id_attr(*label);
                 write!(out, "<h2{label}>\n")?;
