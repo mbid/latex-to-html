@@ -2,6 +2,7 @@ pub mod ast;
 pub mod emit;
 pub mod math_svg;
 pub mod parse;
+pub mod util;
 
 #[test]
 fn parse_eqlog_paper() {

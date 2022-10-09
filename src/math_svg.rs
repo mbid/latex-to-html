@@ -1,6 +1,13 @@
+use crate::ast::*;
+use crate::util::*;
 use indoc::{formatdoc, writedoc};
+use sha2::{Digest, Sha256};
+use std::collections::HashMap;
+use std::fmt::{Display, Formatter};
+use std::fs;
 use std::fs::File;
 use std::io;
+use std::path::{Path, PathBuf};
 use std::process::{self, Command};
 use tempdir::TempDir;
 
@@ -202,6 +209,113 @@ pub fn mathpar_math_to_svg(preamble: &str, math: &str) -> Result<DisplayMathSvg,
     let (svg_el, _) = svg_height_to_em(svg_el)?;
 
     Ok(DisplayMathSvg(String::from(&svg_el)))
+}
+
+type MathDigest = [u8; 32];
+
+fn hash_math(preamble: &str, math: &Math) -> MathDigest {
+    let mut hasher = Sha256::new();
+
+    hasher.update(preamble.as_bytes());
+
+    use Math::*;
+    match math {
+        Inline(source) => {
+            hasher.update(&[0]);
+            hasher.update(source);
+        }
+        Display { source, label: _ } => {
+            hasher.update(&[1]);
+            hasher.update(source);
+        }
+        Mathpar { source, label: _ } => {
+            hasher.update(&[2]);
+            hasher.update(source);
+        }
+    }
+
+    hasher.finalize().as_slice().try_into().unwrap()
+}
+
+pub fn display_svg_math_path<'a>(preamble: &'a str, math: &'a Math<'a>) -> impl 'a + Display {
+    DisplayFn(move |out: &mut Formatter| {
+        let hash: String = hex::encode(hash_math(preamble, math));
+        write!(out, "img-math/{hash}.svg").unwrap();
+        Ok(())
+    })
+}
+
+pub struct MathSvgInfo {
+    pub path: PathBuf,
+    pub y_em_offset: Option<f64>,
+}
+
+pub fn create_math_svg_files<'a, 'b>(
+    root: &'a Path,
+    preamble: &str,
+    math: impl Iterator<Item = &'b Math<'b>>,
+) -> HashMap<&'b Math<'b>, MathSvgInfo> {
+    fs::create_dir_all(root.join("img-math")).unwrap();
+
+    let mut result = HashMap::new();
+
+    math.for_each(|math| {
+        if result.contains_key(&math) {
+            return;
+        }
+
+        let mut info = MathSvgInfo {
+            y_em_offset: None,
+            path: PathBuf::from(format!("{}", display_svg_math_path(preamble, math))),
+        };
+        let path = root.join(&info.path);
+        if path.exists() {
+            fs::remove_file(&path).unwrap();
+        }
+
+        use Math::*;
+        let svg = match math {
+            Inline(src) => {
+                let InlineMathSvg {
+                    svg,
+                    height_em,
+                    baseline_em,
+                } = inline_math_to_svg(preamble, src).unwrap();
+                info.y_em_offset = Some(height_em - baseline_em);
+                svg
+            }
+            Display { source, label: _ } => {
+                let DisplayMathSvg(svg) = display_math_to_svg(preamble, source).unwrap();
+                svg
+            }
+            Mathpar { source, label: _ } => {
+                let DisplayMathSvg(svg) = mathpar_math_to_svg(preamble, source).unwrap();
+                svg
+            }
+        };
+
+        fs::write(&path, svg).unwrap();
+
+        result.insert(math, info);
+    });
+
+    result
+}
+
+pub fn display_svg_style<'a>(infos: &'a HashMap<&'a Math<'a>, MathSvgInfo>) -> impl 'a + Display {
+    DisplayFn(|out: &mut Formatter| {
+        for info in infos.values() {
+            if let Some(y_em_offset) = info.y_em_offset {
+                let path = info.path.display();
+                writedoc! {out, r#"
+                    img[src="{path}"] {{
+                    top: {y_em_offset}em;
+                    }}
+                "#}?;
+            }
+        }
+        Ok(())
+    })
 }
 
 #[test]
