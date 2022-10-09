@@ -8,6 +8,12 @@ pub enum Math<'a> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Item<'a> {
+    pub content: Vec<Paragraph<'a>>,
+    pub label: Option<&'a str>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParagraphPart<'a> {
     InlineWhitespace(&'a str),
     TextToken(&'a str),
@@ -16,8 +22,8 @@ pub enum ParagraphPart<'a> {
     Emph(Paragraph<'a>),
     Label(&'a str),
     Qed,
-    Enumerate(Vec<Vec<Paragraph<'a>>>),
-    Itemize(Vec<Vec<Paragraph<'a>>>),
+    Enumerate(Vec<Item<'a>>),
+    Itemize(Vec<Item<'a>>),
     Todo,
 }
 
@@ -129,7 +135,7 @@ fn for_each_math_paragraph_part_impl<'a>(
         Qed => (),
         Enumerate(items) | Itemize(items) => {
             for item in items {
-                for par in item {
+                for par in item.content.iter() {
                     for part in par {
                         for_each_math_paragraph_part_impl(part, f);
                     }

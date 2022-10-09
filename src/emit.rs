@@ -178,7 +178,7 @@ fn display_paragraph_part<'a>(
                 write!(out, "<ul>\n")?;
                 for item in items {
                     write!(out, "<li>\n")?;
-                    for paragraph in item {
+                    for paragraph in item.content.iter() {
                         display_paragraph(data, paragraph).fmt(out)?;
                     }
                     write!(out, "</li>\n")?;
@@ -189,7 +189,7 @@ fn display_paragraph_part<'a>(
                 write!(out, "<ol>\n")?;
                 for item in items {
                     write!(out, "<li>\n")?;
-                    for paragraph in item {
+                    for paragraph in item.content.iter() {
                         display_paragraph(data, paragraph).fmt(out)?;
                     }
                     write!(out, "</li>\n")?;

@@ -374,19 +374,24 @@ pub fn eqref(i: &str) -> Result<ParagraphPart> {
     Ok((i, ParagraphPart::Ref(val)))
 }
 
-pub fn list_item(i: &str) -> Result<Vec<Paragraph>> {
+pub fn item(i: &str) -> Result<Item> {
     let (i, _) = command_no_args("item")(i)?;
     let (i, _) = inline_ws(i)?;
-    many1(paragraph)(i)
+    let (i, content) = many1(paragraph)(i)?;
+    let item = Item {
+        content,
+        label: None,
+    };
+    Ok((i, item))
 }
 
 pub fn itemize(i: &str) -> Result<ParagraphPart> {
-    let (i, items) = env("itemize", intersperse0(list_item, any_ws))(i)?;
+    let (i, items) = env("itemize", intersperse0(item, any_ws))(i)?;
     Ok((i, ParagraphPart::Itemize(items)))
 }
 
 pub fn enumerate(i: &str) -> Result<ParagraphPart> {
-    let (i, items) = env("enumerate", intersperse0(list_item, any_ws))(i)?;
+    let (i, items) = env("enumerate", intersperse0(item, any_ws))(i)?;
     Ok((i, ParagraphPart::Enumerate(items)))
 }
 
