@@ -172,7 +172,6 @@ fn display_paragraph_part<'a>(
                 let child_displ = display_paragraph(data, child_paragraph);
                 write!(out, "<emph>{child_displ}</emph>")?;
             }
-            Label(_) => {}
             Qed => {}
             Itemize(items) => {
                 write!(out, "<ul>\n")?;
@@ -363,7 +362,6 @@ fn write_index(out: &mut impl Write, doc: &Document, data: &EmitData) -> Result 
                     write!(out, "<p>\n")?;
                 }
             }
-            Label(_) => (),
         }
     }
     writedoc! {out, r#"

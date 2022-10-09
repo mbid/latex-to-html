@@ -352,18 +352,6 @@ pub fn emph(i: &str) -> Result<Emph> {
     Ok((i, Emph(par)))
 }
 
-//pub fn comment(i: &str) -> Result<ParagraphPart> {
-//    let (i, _) = char('%')(i)?;
-//    let (i, comment) = take_while(|c| c != '\n')(i)?;
-//    Ok((i, ParagraphPart::Comment(comment)))
-//}
-
-pub fn paragraph_label(i: &str) -> Result<ParagraphPart> {
-    command("label", label_value)
-        .map(ParagraphPart::Label)
-        .parse(i)
-}
-
 pub fn paragraph_qed(i: &str) -> Result<ParagraphPart> {
     let (i, _) = command_no_args("qed")(i)?;
     Ok((i, ParagraphPart::Qed))
@@ -376,12 +364,14 @@ pub fn eqref(i: &str) -> Result<ParagraphPart> {
 
 pub fn item(i: &str) -> Result<Item> {
     let (i, _) = command_no_args("item")(i)?;
+    let (i, label) = opt(|i| {
+        let (i, _) = any_ws(i)?;
+        let (i, val) = command("label", label_value)(i)?;
+        Ok((i, val))
+    })(i)?;
     let (i, _) = inline_ws(i)?;
     let (i, content) = many1(paragraph)(i)?;
-    let item = Item {
-        content,
-        label: None,
-    };
+    let item = Item { content, label };
     Ok((i, item))
 }
 
@@ -427,8 +417,6 @@ pub fn paragraph<'a>(i: &'a str) -> Result<Paragraph<'a>> {
             ref_command,
             eqref,
             emph,
-            // comment,
-            paragraph_label,
             paragraph_qed,
             itemize,
             enumerate,
@@ -570,12 +558,6 @@ pub fn abstract_env<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
         .parse(i)
 }
 
-pub fn label<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
-    command("label", label_value)
-        .map(DocumentPart::Label)
-        .parse(i)
-}
-
 pub fn theorem_like<'a, 'b>(
     configs: &'b [TheoremLikeConfig<'a>],
     i: &'a str,
@@ -631,7 +613,6 @@ pub fn document_part<'a, 'b>(
         section,
         subsection,
         abstract_env,
-        label,
         theorem_like,
         proof,
     ))(i)?;

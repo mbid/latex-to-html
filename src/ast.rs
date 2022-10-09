@@ -20,7 +20,6 @@ pub enum ParagraphPart<'a> {
     Math(Math<'a>),
     Ref(&'a str),
     Emph(Paragraph<'a>),
-    Label(&'a str),
     Qed,
     Enumerate(Vec<Item<'a>>),
     Itemize(Vec<Item<'a>>),
@@ -57,7 +56,6 @@ pub enum DocumentPart<'a> {
         label: Option<&'a str>,
     },
     Proof(Vec<Paragraph<'a>>),
-    Label(&'a str),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -131,7 +129,6 @@ fn for_each_math_paragraph_part_impl<'a>(
                 for_each_math_paragraph_part_impl(part, f);
             }
         }
-        Label(_) => (),
         Qed => (),
         Enumerate(items) | Itemize(items) => {
             for item in items {
@@ -189,7 +186,6 @@ impl<'a> Syntax for DocumentPart<'a> {
                     .flatten()
                     .for_each(|part| part.for_each_math(&mut f));
             }
-            Label(_) => (),
         }
     }
 }
