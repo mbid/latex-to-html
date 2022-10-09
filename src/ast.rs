@@ -1,4 +1,4 @@
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Math<'a> {
     Inline(&'a str),
     Display {
@@ -9,6 +9,16 @@ pub enum Math<'a> {
         source: &'a str,
         label: Option<&'a str>,
     },
+}
+
+impl<'a> Math<'a> {
+    pub fn label(&self) -> Option<&'a str> {
+        use Math::*;
+        match self {
+            Inline(_) => None,
+            Display { label, .. } | Mathpar { label, .. } => *label,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -108,8 +118,9 @@ pub struct Document<'a> {
 }
 
 pub struct NodeLists<'a> {
-    pub math: Vec<Math<'a>>,
+    pub math: Vec<&'a Math<'a>>,
     pub item_lists: Vec<&'a Vec<Item<'a>>>,
+    pub refs: Vec<&'a str>,
 }
 
 impl<'a> NodeLists<'a> {
@@ -117,6 +128,7 @@ impl<'a> NodeLists<'a> {
         let mut result = NodeLists {
             math: Vec::new(),
             item_lists: Vec::new(),
+            refs: Vec::new(),
         };
 
         doc.parts.iter().for_each(|part| result.add_doc_part(part));
@@ -157,9 +169,12 @@ impl<'a> NodeLists<'a> {
     fn add_par_part(&mut self, part: &'a ParagraphPart<'a>) {
         use ParagraphPart::*;
         match part {
-            InlineWhitespace(_) | TextToken(_) | Ref(_) | Qed | Todo => (),
+            InlineWhitespace(_) | TextToken(_) | Qed | Todo => (),
+            Ref(label_value) => {
+                self.refs.push(label_value);
+            }
             Math(math) => {
-                self.math.push(*math);
+                self.math.push(math);
             }
             Emph(par) => {
                 par.iter().for_each(|part| self.add_par_part(part));

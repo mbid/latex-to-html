@@ -20,7 +20,7 @@ impl<F: Fn(&mut Formatter) -> Result> Display for DisplayFn<F> {
 
 type MathDigest = [u8; 32];
 
-fn hash_math(preamble: &str, math: Math) -> MathDigest {
+fn hash_math(preamble: &str, math: &Math) -> MathDigest {
     let mut hasher = Sha256::new();
 
     hasher.update(preamble.as_bytes());
@@ -44,7 +44,7 @@ fn hash_math(preamble: &str, math: Math) -> MathDigest {
     hasher.finalize().as_slice().try_into().unwrap()
 }
 
-fn display_svg_math_path<'a>(preamble: &'a str, math: Math<'a>) -> impl 'a + Display {
+fn display_svg_math_path<'a>(preamble: &'a str, math: &'a Math<'a>) -> impl 'a + Display {
     DisplayFn(move |out: &mut Formatter| {
         let hash: String = hex::encode(hash_math(preamble, math));
         write!(out, "img-math/{hash}.svg").unwrap();
@@ -61,8 +61,8 @@ pub struct MathSvgInfo {
 fn create_math_svg_files<'a, 'b>(
     root: &'a Path,
     preamble: &str,
-    math: impl Iterator<Item = Math<'b>>,
-) -> HashMap<Math<'b>, MathSvgInfo> {
+    math: impl Iterator<Item = &'b Math<'b>>,
+) -> HashMap<&'b Math<'b>, MathSvgInfo> {
     fs::create_dir_all(root.join("img-math")).unwrap();
 
     let mut result = HashMap::new();
@@ -110,17 +110,58 @@ fn create_math_svg_files<'a, 'b>(
     result
 }
 
-fn display_math<'a>(preamble: &'a str, math: Math<'a>) -> impl 'a + Display {
+fn display_math<'a>(
+    preamble: &'a str,
+    math_numbering: &'a HashMap<*const Math<'a>, String>,
+    math: &'a Math<'a>,
+) -> impl 'a + Display {
     DisplayFn(move |out: &mut Formatter| {
         let path = display_svg_math_path(preamble, math);
         use Math::*;
-        let class = match math {
-            Inline(_) => "inline-math",
-            Display { .. } | Mathpar { .. } => "display-math",
-        };
-        write!(out, r#"<img src="{path}" class="{class}">"#)?;
+        match math {
+            Inline(_) => {
+                write!(out, r#"<img src="{path}" class="inline-math">"#)?;
+            }
+            Display { source: _, label } | Mathpar { source: _, label } => {
+                let id_attr = display_label_id_attr(*label);
+                let number = math_numbering.get(&std::ptr::addr_of!(*math));
+                writedoc! {out, r#"
+                    <div{id_attr} class="display-math-row">
+                "#}?;
+
+                if let Some(number) = number {
+                    writedoc! {out, r#"
+                        <span>{number}</span>
+                    "#}?;
+                }
+                writedoc! {out, r#"
+                    <img src="{path}">
+                "#}?;
+                if let Some(number) = number {
+                    writedoc! {out, r#"
+                            <span>{number}</span>
+                        "#}?;
+                }
+                writedoc! {out, r#"
+                </div>"#}?;
+            }
+        }
         Ok(())
     })
+}
+
+fn assign_math_numberings<'a>(node_lists: &NodeLists<'a>) -> HashMap<*const Math<'a>, String> {
+    let mut result: HashMap<*const Math<'a>, String> = HashMap::new();
+    let mut current_number = 0;
+    for math in node_lists.math.iter().copied() {
+        if let Some(label) = math.label() {
+            if node_lists.refs.iter().find(|l| **l == label).is_some() {
+                current_number += 1;
+                result.insert(math, format!("({current_number})"));
+            }
+        }
+    }
+    result
 }
 
 struct EmitData<'a> {
@@ -130,6 +171,8 @@ struct EmitData<'a> {
     // - Section
     // - Subsection
     numbering: HashMap<*const DocumentPart<'a>, String>,
+    // Number strings assigned to equations.
+    math_numbering: HashMap<*const Math<'a>, String>,
     // The text by which references should refer to what they are referencing.
     label_names: HashMap<&'a str, String>,
 }
@@ -137,12 +180,12 @@ struct EmitData<'a> {
 impl<'a> EmitData<'a> {
     fn new(doc: &'a Document<'a>, node_lists: &NodeLists<'a>) -> Self {
         let numbering = assign_numberings(doc);
-        //let item_numbering = assign_item_numberings(node_lists);
-        let label_names = assign_label_names(doc, node_lists, &numbering);
+        let math_numbering = assign_math_numberings(node_lists);
+        let label_names = assign_label_names(doc, node_lists, &numbering, &math_numbering);
         EmitData {
             preamble: &doc.preamble,
             numbering,
-            //item_numbering,
+            math_numbering,
             label_names,
         }
     }
@@ -178,7 +221,11 @@ fn display_paragraph_part<'a>(
             }
             TextToken(tok) => out.write_str(tok)?,
             Math(math) => {
-                write!(out, "{}", display_math(data.preamble, *math))?;
+                write!(
+                    out,
+                    "{}",
+                    display_math(data.preamble, &data.math_numbering, math)
+                )?;
             }
             Ref(value) => {
                 let name = match data.label_names.get(value) {
@@ -381,23 +428,8 @@ fn write_index(out: &mut impl Write, doc: &Document, data: &EmitData) -> Result 
     Ok(())
 }
 
-pub fn display_svg_style<'a>(infos: &'a HashMap<Math<'a>, MathSvgInfo>) -> impl 'a + Display {
+pub fn display_svg_style<'a>(infos: &'a HashMap<&'a Math<'a>, MathSvgInfo>) -> impl 'a + Display {
     DisplayFn(|out: &mut Formatter| {
-        writedoc! {out, r#"
-            .inline-math {{
-            vertical-align: baseline;
-            position: relative;
-            }}
-
-            .display-math {{
-            display: block;
-            margin: auto;
-            margin-top: 0.5em;
-            margin-bottom: 0.5em;
-            }}
-
-        "#}?;
-
         for info in infos.values() {
             if let Some(y_em_offset) = info.y_em_offset {
                 let path = info.path.display();
@@ -442,6 +474,7 @@ pub fn assign_label_names<'a>(
     doc: &Document<'a>,
     node_lists: &NodeLists<'a>,
     numbering: &HashMap<*const DocumentPart, String>,
+    math_numbering: &HashMap<*const Math, String>,
 ) -> HashMap<&'a str, String> {
     let mut names = HashMap::new();
     for part in doc.parts.iter() {
@@ -449,8 +482,8 @@ pub fn assign_label_names<'a>(
         match part {
             TheoremLike { label, .. } | Section { label, .. } | Subsection { label, .. } => {
                 if let Some(label) = label {
-                    let number = numbering.get(&std::ptr::addr_of!(*part)).unwrap().clone();
-                    names.insert(*label, number);
+                    let number = numbering.get(&std::ptr::addr_of!(*part)).unwrap();
+                    names.insert(*label, number.clone());
                 }
             }
             _ => (),
@@ -464,6 +497,14 @@ pub fn assign_label_names<'a>(
             }
         }
     }
+
+    for math in node_lists.math.iter().copied() {
+        if let Some(label) = math.label() {
+            if let Some(number) = math_numbering.get(&std::ptr::addr_of!(*math)) {
+                names.insert(label, number.clone());
+            }
+        }
+    }
     names
 }
 
@@ -471,7 +512,30 @@ const STYLE: &'static str = indoc! {"
     h4 {
         display: inline;
     }
-"};
+
+    .inline-math {
+        vertical-align: baseline;
+        position: relative;
+    }
+
+    .display-math-row {
+        display: flex;
+        justify-content: center;
+        flex-direction: row;
+        align-items: center;
+        margin-top: 0.5em;
+        margin-bottom: 0.5em;
+    }
+
+    .display-math-row > span {
+        display: inline-flex;
+        flex-direction: row-reverse;
+        flex-grow: 1;
+    }
+
+    .display-math-row > span:first-child {
+        visibility: hidden;
+    }"};
 
 pub fn emit(root: &Path, doc: &Document) {
     let node_lists = NodeLists::new(doc);
