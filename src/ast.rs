@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum Math<'a> {
     Inline(&'a str),
@@ -101,7 +99,6 @@ pub struct Document<'a> {
     pub preamble: String,
     pub parts: Vec<DocumentPart<'a>>,
     pub config: DocumentConfig<'a>,
-    pub label_names: Option<HashMap<&'a str, String>>,
 }
 
 pub struct NodeLists<'a> {

@@ -662,13 +662,10 @@ pub fn document<'a>(i: &'a str) -> Result<Document<'a>> {
     let (i, _) = any_ws(i)?;
     let (i, _) = command("end", tag("document"))(i)?;
     let (i, _) = any_ws(i)?;
-    Ok((
-        i,
-        Document {
-            config,
-            preamble,
-            parts,
-            label_names: None,
-        },
-    ))
+    let doc = Document {
+        config,
+        preamble,
+        parts,
+    };
+    Ok((i, doc))
 }
