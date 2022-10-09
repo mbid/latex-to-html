@@ -135,15 +135,30 @@ struct EmitData<'a> {
 }
 
 impl<'a> EmitData<'a> {
-    fn new(doc: &'a Document<'a>) -> Self {
+    fn new(doc: &'a Document<'a>, node_lists: &NodeLists<'a>) -> Self {
         let numbering = assign_numberings(doc);
-        let label_names = assign_label_names(doc, &numbering);
+        //let item_numbering = assign_item_numberings(node_lists);
+        let label_names = assign_label_names(doc, node_lists, &numbering);
         EmitData {
             preamble: &doc.preamble,
             numbering,
+            //item_numbering,
             label_names,
         }
     }
+}
+
+fn display_label_id_attr(label_value: Option<&str>) -> impl '_ + Display {
+    DisplayFn(move |out: &mut Formatter| {
+        let label_value = match label_value {
+            None => {
+                return Ok(());
+            }
+            Some(label_value) => display_label_value(label_value),
+        };
+        write!(out, r#" id="{label_value}""#)?;
+        Ok(())
+    })
 }
 
 fn display_paragraph_part<'a>(
@@ -181,6 +196,7 @@ fn display_paragraph_part<'a>(
             Itemize(items) => {
                 write!(out, "<ul>\n")?;
                 for item in items {
+                    assert!(item.label.is_none());
                     write!(out, "<li>\n")?;
                     for paragraph in item.content.iter() {
                         display_paragraph(data, paragraph).fmt(out)?;
@@ -192,7 +208,8 @@ fn display_paragraph_part<'a>(
             Enumerate(items) => {
                 write!(out, "<ol>\n")?;
                 for item in items {
-                    write!(out, "<li>\n")?;
+                    let id_attr = display_label_id_attr(item.label);
+                    write!(out, "<li{id_attr}>\n")?;
                     for paragraph in item.content.iter() {
                         display_paragraph(data, paragraph).fmt(out)?;
                     }
@@ -237,19 +254,6 @@ pub fn display_head(title: impl Display) -> impl Display {
 
 fn display_label_value(label_value: &str) -> impl '_ + Display {
     label_value.replace(":", "-").to_case(Case::Kebab)
-}
-
-fn display_label_id_attr(label_value: Option<&str>) -> impl '_ + Display {
-    DisplayFn(move |out: &mut Formatter| {
-        let label_value = match label_value {
-            None => {
-                return Ok(());
-            }
-            Some(label_value) => display_label_value(label_value),
-        };
-        write!(out, r#" id="{label_value}""#)?;
-        Ok(())
-    })
 }
 
 fn display_theorem_header<'a>(
@@ -436,30 +440,28 @@ pub fn assign_numberings<'a>(doc: &Document<'a>) -> HashMap<*const DocumentPart<
 
 pub fn assign_label_names<'a>(
     doc: &Document<'a>,
+    node_lists: &NodeLists<'a>,
     numbering: &HashMap<*const DocumentPart, String>,
 ) -> HashMap<&'a str, String> {
     let mut names = HashMap::new();
     for part in doc.parts.iter() {
+        use DocumentPart::*;
         match part {
-            DocumentPart::TheoremLike {
-                label: Some(label), ..
-            } => {
-                let number = numbering.get(&std::ptr::addr_of!(*part)).unwrap().clone();
-                names.insert(*label, number);
-            }
-            DocumentPart::Section {
-                label: Some(label), ..
-            } => {
-                let number = numbering.get(&std::ptr::addr_of!(*part)).unwrap().clone();
-                names.insert(*label, number);
-            }
-            DocumentPart::Subsection {
-                label: Some(label), ..
-            } => {
-                let number = numbering.get(&std::ptr::addr_of!(*part)).unwrap().clone();
-                names.insert(*label, number);
+            TheoremLike { label, .. } | Section { label, .. } | Subsection { label, .. } => {
+                if let Some(label) = label {
+                    let number = numbering.get(&std::ptr::addr_of!(*part)).unwrap().clone();
+                    names.insert(*label, number);
+                }
             }
             _ => (),
+        }
+    }
+
+    for item_list in node_lists.item_lists.iter() {
+        for (i, item) in item_list.iter().enumerate() {
+            if let Some(label) = item.label {
+                names.insert(label, (i + 1).to_string());
+            }
         }
     }
     names
@@ -473,7 +475,7 @@ const STYLE: &'static str = indoc! {"
 
 pub fn emit(root: &Path, doc: &Document) {
     let node_lists = NodeLists::new(doc);
-    let data = EmitData::new(doc);
+    let data = EmitData::new(doc, &node_lists);
 
     fs::create_dir_all(root).unwrap();
 

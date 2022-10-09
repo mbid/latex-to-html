@@ -377,6 +377,12 @@ pub fn item(i: &str) -> Result<Item> {
 
 pub fn itemize(i: &str) -> Result<ParagraphPart> {
     let (i, items) = env("itemize", intersperse0(item, any_ws))(i)?;
+    for item in items.iter() {
+        assert!(
+            item.label.is_none(),
+            "Label for item in an itemize environment not allowed"
+        );
+    }
     Ok((i, ParagraphPart::Itemize(items)))
 }
 
