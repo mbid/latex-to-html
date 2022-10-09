@@ -106,11 +106,15 @@ pub struct Document<'a> {
 
 pub struct NodeLists<'a> {
     pub math: Vec<Math<'a>>,
+    pub item_lists: Vec<&'a Vec<Item<'a>>>,
 }
 
 impl<'a> NodeLists<'a> {
     pub fn new(doc: &'a Document<'a>) -> Self {
-        let mut result = NodeLists { math: Vec::new() };
+        let mut result = NodeLists {
+            math: Vec::new(),
+            item_lists: Vec::new(),
+        };
 
         doc.parts.iter().for_each(|part| result.add_doc_part(part));
         result
@@ -158,6 +162,7 @@ impl<'a> NodeLists<'a> {
                 par.iter().for_each(|part| self.add_par_part(part));
             }
             Enumerate(items) | Itemize(items) => {
+                self.item_lists.push(items);
                 items
                     .iter()
                     .map(|it| &it.content)
