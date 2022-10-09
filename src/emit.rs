@@ -10,13 +10,16 @@ use std::io::Write as IoWrite;
 use std::path::Path;
 use std::write;
 
+const SVG_OUT_DIR: &'static str = "img-math";
+
 fn display_math<'a>(
     preamble: &'a str,
     math_numbering: &'a HashMap<*const Math<'a>, String>,
     math: &'a Math<'a>,
 ) -> impl 'a + Display {
     DisplayFn(move |out: &mut Formatter| {
-        let path = display_svg_math_path(preamble, math);
+        let digest = hash_math(preamble, math);
+        let path = format!("img-math/{digest}.svg");
         use Math::*;
         match math {
             Inline(_) => {
@@ -196,7 +199,7 @@ pub fn display_head(title: impl Display) -> impl Display {
               <title>{title}</title>
               <link rel="stylesheet" type="text/css" href="https://cdn.rawgit.com/dreampulse/computer-modern-web-font/master/fonts.css">
               <link rel="stylesheet" type="text/css" href="style.css">
-              <link rel="stylesheet" type="text/css" href="img-math/style.css">
+              <link rel="stylesheet" type="text/css" href="{SVG_OUT_DIR}/offsets.css">
               <style>
               body {{
               font-family: "Computer Modern Serif", serif;
@@ -533,14 +536,6 @@ pub fn emit(root: &Path, doc: &Document) {
         .unwrap();
     write!(style_path, "{STYLE}").unwrap();
 
-    let svg_infos = create_math_svg_files(root, &doc.preamble, node_lists.math.iter().copied());
-
-    let svg_style_path = root.join("img-math/style.css");
-    let mut svg_style_file = std::fs::OpenOptions::new()
-        .write(true)
-        .truncate(true)
-        .create(true)
-        .open(svg_style_path)
-        .unwrap();
-    write!(svg_style_file, "{}", display_svg_style(&svg_infos)).unwrap();
+    let svg_out_dir = root.join(SVG_OUT_DIR);
+    emit_math_svg_files(&svg_out_dir, &doc.preamble, node_lists.math.iter().copied());
 }

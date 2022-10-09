@@ -1,13 +1,11 @@
 use crate::ast::*;
-use crate::util::*;
 use indoc::{formatdoc, writedoc};
 use sha2::{Digest, Sha256};
-use std::collections::HashMap;
-use std::fmt::{Display, Formatter};
-use std::fs;
-use std::fs::File;
+use std::fmt::{self, Display, Formatter};
+use std::fs::{self, File, OpenOptions};
 use std::io;
-use std::path::{Path, PathBuf};
+use std::io::Write as IoWrite;
+use std::path::Path;
 use std::process::{self, Command};
 use tempdir::TempDir;
 
@@ -211,9 +209,16 @@ pub fn mathpar_math_to_svg(preamble: &str, math: &str) -> Result<DisplayMathSvg,
     Ok(DisplayMathSvg(String::from(&svg_el)))
 }
 
-type MathDigest = [u8; 32];
+pub struct MathDigest(pub [u8; 32]);
 
-fn hash_math(preamble: &str, math: &Math) -> MathDigest {
+impl Display for MathDigest {
+    fn fmt(&self, out: &mut Formatter) -> fmt::Result {
+        write!(out, "{}", hex::encode(self.0))?;
+        Ok(())
+    }
+}
+
+pub fn hash_math(preamble: &str, math: &Math) -> MathDigest {
     let mut hasher = Sha256::new();
 
     hasher.update(preamble.as_bytes());
@@ -234,43 +239,31 @@ fn hash_math(preamble: &str, math: &Math) -> MathDigest {
         }
     }
 
-    hasher.finalize().as_slice().try_into().unwrap()
+    MathDigest(hasher.finalize().as_slice().try_into().unwrap())
 }
 
-pub fn display_svg_math_path<'a>(preamble: &'a str, math: &'a Math<'a>) -> impl 'a + Display {
-    DisplayFn(move |out: &mut Formatter| {
-        let hash: String = hex::encode(hash_math(preamble, math));
-        write!(out, "img-math/{hash}.svg").unwrap();
-        Ok(())
-    })
-}
-
-pub struct MathSvgInfo {
-    pub path: PathBuf,
-    pub y_em_offset: Option<f64>,
-}
-
-pub fn create_math_svg_files<'a, 'b>(
-    root: &'a Path,
+pub fn emit_math_svg_files<'a, 'b>(
+    out_dir: &'a Path,
     preamble: &str,
     math: impl Iterator<Item = &'b Math<'b>>,
-) -> HashMap<&'b Math<'b>, MathSvgInfo> {
-    fs::create_dir_all(root.join("img-math")).unwrap();
+) {
+    fs::create_dir_all(out_dir).unwrap();
 
-    let mut result = HashMap::new();
+    let offsets_path = out_dir.join("offsets.css");
+    let mut offsets_file = OpenOptions::new()
+        .write(true)
+        .append(true)
+        .create(true)
+        .open(offsets_path)
+        .unwrap();
 
-    math.for_each(|math| {
-        if result.contains_key(&math) {
-            return;
-        }
+    for math in math {
+        let digest = hash_math(preamble, &math);
 
-        let mut info = MathSvgInfo {
-            y_em_offset: None,
-            path: PathBuf::from(format!("{}", display_svg_math_path(preamble, math))),
-        };
-        let path = root.join(&info.path);
-        if path.exists() {
-            fs::remove_file(&path).unwrap();
+        let svg_filename = format!("{digest}.svg");
+        let svg_path = out_dir.join(&svg_filename);
+        if svg_path.exists() {
+            continue;
         }
 
         use Math::*;
@@ -281,7 +274,15 @@ pub fn create_math_svg_files<'a, 'b>(
                     height_em,
                     baseline_em,
                 } = inline_math_to_svg(preamble, src).unwrap();
-                info.y_em_offset = Some(height_em - baseline_em);
+                let y_em_offset = height_em - baseline_em;
+                // Match all img files with src attribute ending in the filename.
+                writedoc! {offsets_file, r#"
+                    img[src$="{digest}.svg"] {{
+                    top: {y_em_offset}em;
+                    }}
+                "#}
+                .unwrap();
+                offsets_file.sync_data().unwrap();
                 svg
             }
             Display { source, label: _ } => {
@@ -294,32 +295,8 @@ pub fn create_math_svg_files<'a, 'b>(
             }
         };
 
-        fs::write(&path, svg).unwrap();
-
-        result.insert(math, info);
-    });
-
-    result
-}
-
-pub fn display_svg_style<'a>(infos: &'a HashMap<&'a Math<'a>, MathSvgInfo>) -> impl 'a + Display {
-    DisplayFn(|out: &mut Formatter| {
-        for info in infos.values() {
-            if let Some(y_em_offset) = info.y_em_offset {
-                let path = info.path.display();
-                writedoc! {out, r#"
-                    img[src="{path}"] {{
-                    top: {y_em_offset}em;
-                    }}
-                "#}?;
-            }
-        }
-        Ok(())
-    })
-}
-
-#[test]
-fn test_display_math_to_svg() {
-    display_math_to_svg("", "5 + 3 + N").unwrap();
-    mathpar_math_to_svg("\\usepackage{mathpartir}", "5 + 3 + N").unwrap();
+        let svg_path_tmp = svg_path.with_file_name(format!("{svg_filename}.tmp"));
+        fs::write(&svg_path_tmp, svg).unwrap();
+        fs::rename(svg_path_tmp, svg_path).unwrap();
+    }
 }
