@@ -407,9 +407,20 @@ fn write_index(out: &mut impl Write, doc: &Document, data: &EmitData) -> Result 
                 let header = display_theorem_header(data, &theorem_like_config.name, number);
                 writedoc! {out, r#"
                     <div{label} class="theorem-like">
+                    <div class="paragraph">
                     {header}
                 "#}?;
-                for parag in content.iter() {
+
+                let mut content = content.iter();
+                if let Some(parag) = content.next() {
+                    for part in parag {
+                        write!(out, "{}", display_paragraph_part(data, part))?;
+                    }
+                }
+                writedoc! {out, r#"
+                    </div>
+                "#}?;
+                for parag in content {
                     write!(out, "{}", display_paragraph(data, parag))?;
                 }
                 writedoc! {out, r#"
