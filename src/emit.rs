@@ -57,19 +57,24 @@ pub struct MathSvgInfo {
     y_em_offset: Option<f64>,
 }
 
-fn create_math_svg_files<'a>(root: &'a Path, doc: &'a Document) -> HashMap<Math<'a>, MathSvgInfo> {
+// fn create_math_svg_files<'a>(root: &'a Path, doc: &'a Document) -> HashMap<Math<'a>, MathSvgInfo> {
+fn create_math_svg_files<'a, 'b>(
+    root: &'a Path,
+    preamble: &str,
+    math: impl Iterator<Item = Math<'b>>,
+) -> HashMap<Math<'b>, MathSvgInfo> {
     fs::create_dir_all(root.join("img-math")).unwrap();
 
     let mut result = HashMap::new();
 
-    doc.for_each_math(|math| {
+    math.for_each(|math| {
         if result.contains_key(&math) {
             return;
         }
 
         let mut info = MathSvgInfo {
             y_em_offset: None,
-            path: PathBuf::from(format!("{}", display_svg_math_path(&doc.preamble, math))),
+            path: PathBuf::from(format!("{}", display_svg_math_path(preamble, math))),
         };
         let path = root.join(&info.path);
         if path.exists() {
@@ -83,16 +88,16 @@ fn create_math_svg_files<'a>(root: &'a Path, doc: &'a Document) -> HashMap<Math<
                     svg,
                     height_em,
                     baseline_em,
-                } = inline_math_to_svg(&doc.preamble, src).unwrap();
+                } = inline_math_to_svg(preamble, src).unwrap();
                 info.y_em_offset = Some(height_em - baseline_em);
                 svg
             }
             Display(src) => {
-                let DisplayMathSvg(svg) = display_math_to_svg(&doc.preamble, src).unwrap();
+                let DisplayMathSvg(svg) = display_math_to_svg(preamble, src).unwrap();
                 svg
             }
             Mathpar(src) => {
-                let DisplayMathSvg(svg) = mathpar_math_to_svg(&doc.preamble, src).unwrap();
+                let DisplayMathSvg(svg) = mathpar_math_to_svg(preamble, src).unwrap();
                 svg
             }
         };
@@ -467,6 +472,7 @@ const STYLE: &'static str = indoc! {"
 "};
 
 pub fn emit(root: &Path, doc: &Document) {
+    let node_lists = NodeLists::new(doc);
     let data = EmitData::new(doc);
 
     fs::create_dir_all(root).unwrap();
@@ -492,7 +498,7 @@ pub fn emit(root: &Path, doc: &Document) {
         .unwrap();
     write!(style_path, "{STYLE}").unwrap();
 
-    let svg_infos = create_math_svg_files(root, doc);
+    let svg_infos = create_math_svg_files(root, &doc.preamble, node_lists.math.iter().copied());
 
     let svg_style_path = root.join("img-math/style.css");
     let mut svg_style_file = std::fs::OpenOptions::new()

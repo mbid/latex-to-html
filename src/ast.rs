@@ -104,111 +104,69 @@ pub struct Document<'a> {
     pub label_names: Option<HashMap<&'a str, String>>,
 }
 
-pub trait Syntax {
-    fn for_each_math<'a>(self: &'a Self, f: impl FnMut(Math<'a>) -> ());
+pub struct NodeLists<'a> {
+    pub math: Vec<Math<'a>>,
 }
 
-impl<'a> Syntax for Math<'a> {
-    fn for_each_math<'b>(self: &'b Self, mut f: impl FnMut(Math<'b>) -> ()) {
-        f(*self)
+impl<'a> NodeLists<'a> {
+    pub fn new(doc: &'a Document<'a>) -> Self {
+        let mut result = NodeLists { math: Vec::new() };
+
+        doc.parts.iter().for_each(|part| result.add_doc_part(part));
+        result
     }
-}
 
-fn for_each_math_paragraph_part_impl<'a>(
-    part: &'a ParagraphPart,
-    f: &mut impl FnMut(Math<'a>) -> (),
-) {
-    use ParagraphPart::*;
-    match part {
-        InlineWhitespace(_) => (),
-        TextToken(_) => (),
-        Math(math) => math.for_each_math(f),
-        Ref(_) => (),
-        Emph(par) => {
-            for part in par {
-                for_each_math_paragraph_part_impl(part, f);
-            }
-        }
-        Qed => (),
-        Enumerate(items) | Itemize(items) => {
-            for item in items {
-                for par in item.content.iter() {
-                    for part in par {
-                        for_each_math_paragraph_part_impl(part, f);
-                    }
-                }
-            }
-        }
-        Todo => (),
-    }
-}
-
-impl<'a> Syntax for ParagraphPart<'a> {
-    fn for_each_math<'b>(self: &'b Self, mut f: impl FnMut(Math<'b>) -> ()) {
-        for_each_math_paragraph_part_impl(self, &mut f);
-    }
-}
-
-impl<'a> Syntax for DocumentPart<'a> {
-    fn for_each_math<'b>(self: &'b Self, mut f: impl FnMut(Math<'b>) -> ()) {
+    fn add_doc_part(&mut self, part: &'a DocumentPart<'a>) {
         use DocumentPart::*;
-        match self {
-            FreeParagraph(par) => {
-                par.iter().for_each(|part| part.for_each_math(&mut f));
+        match part {
+            Date() | Maketitle() => (),
+            FreeParagraph(par)
+            | Title(par)
+            | Author(par)
+            | Section {
+                name: par,
+                label: _,
             }
-            Title(par) => {
-                par.iter().for_each(|part| part.for_each_math(&mut f));
+            | Subsection {
+                name: par,
+                label: _,
+            } => {
+                par.iter().for_each(|part| self.add_par_part(part));
             }
-            Author(par) => {
-                par.iter().for_each(|part| part.for_each_math(&mut f));
+            Abstract(pars)
+            | TheoremLike {
+                content: pars,
+                tag: _,
+                label: _,
             }
-            Date() => (),
-            Maketitle() => (),
-            Section { name, .. } => {
-                name.iter().for_each(|part| part.for_each_math(&mut f));
-            }
-            Subsection { name, .. } => {
-                name.iter().for_each(|part| part.for_each_math(&mut f));
-            }
-            Abstract(pars) => {
+            | Proof(pars) => {
                 pars.iter()
                     .flatten()
-                    .for_each(|part| part.for_each_math(&mut f));
-            }
-            TheoremLike { content, .. } => {
-                content
-                    .iter()
-                    .flatten()
-                    .for_each(|part| part.for_each_math(&mut f));
-            }
-            Proof(pars) => {
-                pars.iter()
-                    .flatten()
-                    .for_each(|part| part.for_each_math(&mut f));
+                    .for_each(|part| self.add_par_part(part));
             }
         }
     }
-}
 
-impl<'a> Syntax for TheoremLikeConfig<'a> {
-    fn for_each_math<'b>(self: &'b Self, mut f: impl FnMut(Math<'b>) -> ()) {
-        self.name.iter().for_each(|part| part.for_each_math(&mut f));
-    }
-}
-
-impl<'a> Syntax for DocumentConfig<'a> {
-    fn for_each_math<'b>(self: &'b Self, mut f: impl FnMut(Math<'b>) -> ()) {
-        self.theorem_like_configs
-            .iter()
-            .for_each(|c| c.for_each_math(&mut f));
-    }
-}
-
-impl<'a> Syntax for Document<'a> {
-    fn for_each_math<'b>(self: &'b Self, mut f: impl FnMut(Math<'b>) -> ()) {
-        self.parts
-            .iter()
-            .for_each(|part| part.for_each_math(&mut f));
-        self.config.for_each_math(&mut f);
+    fn add_par_part(&mut self, part: &'a ParagraphPart<'a>) {
+        use ParagraphPart::*;
+        match part {
+            InlineWhitespace(_) | TextToken(_) | Ref(_) | Qed | Todo => (),
+            Math(math) => {
+                self.math.push(*math);
+            }
+            Emph(par) => {
+                par.iter().for_each(|part| self.add_par_part(part));
+            }
+            Enumerate(items) | Itemize(items) => {
+                items
+                    .iter()
+                    .map(|it| &it.content)
+                    .flatten()
+                    .flatten()
+                    .for_each(|part| {
+                        self.add_par_part(part);
+                    });
+            }
+        }
     }
 }
