@@ -200,11 +200,6 @@ pub fn display_head(title: impl Display) -> impl Display {
               <link rel="stylesheet" type="text/css" href="https://cdn.rawgit.com/dreampulse/computer-modern-web-font/master/fonts.css">
               <link rel="stylesheet" type="text/css" href="style.css">
               <link rel="stylesheet" type="text/css" href="{SVG_OUT_DIR}/offsets.css">
-              <style>
-              body {{
-              font-family: "Computer Modern Serif", serif;
-              }}
-              </style>
               </head>
         "#}?;
         Ok(())
@@ -468,11 +463,13 @@ pub fn assign_label_names<'a>(
     names
 }
 
-const STYLE: &'static str = indoc! {"
+const STYLE: &'static str = indoc! {r#"
     body {
+        font-family: "Computer Modern Serif", serif;
         max-width: 600px;
         margin: auto;
     }
+
     h4 {
         display: inline;
     }
@@ -507,7 +504,7 @@ const STYLE: &'static str = indoc! {"
 
     .display-math-row > span:first-child {
         visibility: hidden;
-    }"};
+    }"#};
 
 pub fn emit(root: &Path, doc: &Document) {
     let node_lists = NodeLists::new(doc);
