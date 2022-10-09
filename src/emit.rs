@@ -236,8 +236,11 @@ fn display_paragraph_part<'a>(
                 write!(out, "<a href=\"#{value}\">{name}</a>")?;
             }
             Emph(child_paragraph) => {
-                let child_displ = display_paragraph(data, child_paragraph);
-                write!(out, "<emph>{child_displ}</emph>")?;
+                write!(out, "<emph>")?;
+                for part in child_paragraph.iter() {
+                    write!(out, "{}", display_paragraph_part(data, part))?;
+                }
+                write!(out, "</emph>")?;
             }
             Qed => {}
             Itemize(items) => {
@@ -272,9 +275,15 @@ fn display_paragraph_part<'a>(
 
 fn display_paragraph<'a>(data: &'a EmitData<'a>, paragraph: &'a Paragraph) -> impl 'a + Display {
     DisplayFn(|out: &mut Formatter| {
+        writedoc! {out, r#"
+            <div class="paragraph">
+        "#}?;
         for part in paragraph.iter() {
             write!(out, "{}", display_paragraph_part(data, part))?;
         }
+        writedoc! {out, r#"
+            </div>
+        "#}?;
         Ok(())
     })
 }
@@ -310,9 +319,9 @@ fn display_theorem_header<'a>(
 ) -> impl 'a + Display {
     DisplayFn(move |out: &mut Formatter| {
         write!(out, "<h4>")?;
-
-        let name = display_paragraph(data, name);
-        write!(out, "{name}")?;
+        for part in name.iter() {
+            write!(out, "{}", display_paragraph_part(data, part))?;
+        }
         if let Some(number) = number {
             write!(out, " {number}")?;
         }
@@ -338,9 +347,7 @@ fn write_index(out: &mut impl Write, doc: &Document, data: &EmitData) -> Result 
         use DocumentPart::*;
         match part {
             FreeParagraph(p) => {
-                write!(out, "<p>\n")?;
                 write!(out, "{}", display_paragraph(data, p))?;
-                write!(out, "</p>\n")?;
             }
             Title(_) => (),
             Author(_) => (),
@@ -356,7 +363,9 @@ fn write_index(out: &mut impl Write, doc: &Document, data: &EmitData) -> Result 
                 if let Some(number) = number {
                     write!(out, "{number} ")?;
                 }
-                write!(out, "{}", display_paragraph(data, name))?;
+                for part in name {
+                    write!(out, "{}", display_paragraph_part(data, part))?;
+                }
                 write!(out, "</h2>\n")?;
             }
             Subsection { name, label } => {
@@ -369,15 +378,15 @@ fn write_index(out: &mut impl Write, doc: &Document, data: &EmitData) -> Result 
                 if let Some(number) = number {
                     write!(out, "{number} ")?;
                 }
-                write!(out, "{}", display_paragraph(data, name))?;
+                for part in name {
+                    write!(out, "{}", display_paragraph_part(data, part))?;
+                }
                 write!(out, "</h3>\n")?;
             }
             Abstract(ps) => {
                 write!(out, "<h2>Abstract</h2>\n")?;
                 for p in ps {
-                    write!(out, "<p>\n")?;
                     write!(out, "{}", display_paragraph(data, p))?;
-                    write!(out, "<p>\n")?;
                 }
             }
             TheoremLike {
@@ -396,27 +405,38 @@ fn write_index(out: &mut impl Write, doc: &Document, data: &EmitData) -> Result 
                     .get(&std::ptr::addr_of!(*part))
                     .map(|s| s.as_str());
                 let header = display_theorem_header(data, &theorem_like_config.name, number);
-                writedoc! {out, "
-                    <div{label}>
+                writedoc! {out, r#"
+                    <div{label} class="theorem-like">
                     {header}
-                "}?;
+                "#}?;
                 for parag in content.iter() {
-                    let parag_displ = display_paragraph(data, parag);
-                    writedoc! {out, "
-                        {parag_displ}
-                    "}?;
+                    write!(out, "{}", display_paragraph(data, parag))?;
                 }
-                writedoc! {out, "
+                writedoc! {out, r#"
                     </div>
-                "}?;
+                "#}?;
             }
             Proof(ps) => {
-                write!(out, "<emph>Proof.</emph>\n")?;
-                for p in ps {
-                    write!(out, "<p>\n")?;
-                    write!(out, "{}", display_paragraph(data, p))?;
-                    write!(out, "<p>\n")?;
+                writedoc! {out, r#"
+                    <div class="proof">
+                    <div class="paragraph">
+                    <i class="proof">Proof.</i>
+                "#}?;
+                let mut ps = ps.iter();
+                if let Some(parag) = ps.next() {
+                    for part in parag {
+                        write!(out, "{}", display_paragraph_part(data, part))?;
+                    }
                 }
+                writedoc! {out, r#"
+                    </div>
+                "#}?;
+                for p in ps {
+                    write!(out, "{}", display_paragraph(data, p))?;
+                }
+                writedoc! {out, r#"
+                    </div>
+                "#}?;
             }
         }
     }
