@@ -1,8 +1,14 @@
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum Math<'a> {
     Inline(&'a str),
-    Display(&'a str),
-    Mathpar(&'a str),
+    Display {
+        source: &'a str,
+        label: Option<&'a str>,
+    },
+    Mathpar {
+        source: &'a str,
+        label: Option<&'a str>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

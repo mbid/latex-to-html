@@ -27,17 +27,17 @@ fn hash_math(preamble: &str, math: Math) -> MathDigest {
 
     use Math::*;
     match math {
-        Inline(src) => {
+        Inline(source) => {
             hasher.update(&[0]);
-            hasher.update(src);
+            hasher.update(source);
         }
-        Display(src) => {
+        Display { source, label: _ } => {
             hasher.update(&[1]);
-            hasher.update(src);
+            hasher.update(source);
         }
-        Mathpar(src) => {
+        Mathpar { source, label: _ } => {
             hasher.update(&[2]);
-            hasher.update(src);
+            hasher.update(source);
         }
     }
 
@@ -92,12 +92,12 @@ fn create_math_svg_files<'a, 'b>(
                 info.y_em_offset = Some(height_em - baseline_em);
                 svg
             }
-            Display(src) => {
-                let DisplayMathSvg(svg) = display_math_to_svg(preamble, src).unwrap();
+            Display { source, label: _ } => {
+                let DisplayMathSvg(svg) = display_math_to_svg(preamble, source).unwrap();
                 svg
             }
-            Mathpar(src) => {
-                let DisplayMathSvg(svg) = mathpar_math_to_svg(preamble, src).unwrap();
+            Mathpar { source, label: _ } => {
+                let DisplayMathSvg(svg) = mathpar_math_to_svg(preamble, source).unwrap();
                 svg
             }
         };
@@ -116,7 +116,7 @@ fn display_math<'a>(preamble: &'a str, math: Math<'a>) -> impl 'a + Display {
         use Math::*;
         let class = match math {
             Inline(_) => "inline-math",
-            Display(_) | Mathpar(_) => "display-math",
+            Display { .. } | Mathpar { .. } => "display-math",
         };
         write!(out, r#"<img src="{path}" class="{class}">"#)?;
         Ok(())

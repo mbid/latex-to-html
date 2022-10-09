@@ -323,13 +323,25 @@ pub fn inline_math(i: &str) -> Result<Math> {
 }
 
 pub fn display_math(i: &str) -> Result<Math> {
-    let (i, content) = raw_env("equation")(i)?;
-    Ok((i, Math::Display(content.0)))
+    let (i, source) = raw_env("equation")(i)?;
+    Ok((
+        i,
+        Math::Display {
+            source: source.0,
+            label: None,
+        },
+    ))
 }
 
 pub fn mathpar(i: &str) -> Result<Math> {
-    let (i, content) = raw_env("mathpar")(i)?;
-    Ok((i, Math::Mathpar(content.0)))
+    let (i, source) = raw_env("mathpar")(i)?;
+    Ok((
+        i,
+        Math::Mathpar {
+            source: source.0,
+            label: None,
+        },
+    ))
 }
 
 pub fn label_value(i: &str) -> Result<&str> {
@@ -448,38 +460,6 @@ pub fn paragraph<'a>(i: &'a str) -> Result<Paragraph<'a>> {
     }
 
     Ok((i, result))
-}
-
-#[test]
-fn paragraph_test() {
-    let p1 = indoc::indoc! {"
-        asdf fjfj  \t $ 5 = \\mathbb{N}$
-        \\ref{123}
-        \\begin{equation}
-            k = 5
-        \\end{equation}
-
-        123
-    "};
-
-    let (i, paragraph) = paragraph(p1).unwrap();
-    assert_eq!(i, "\n\n123\n");
-
-    use ParagraphPart::*;
-    assert_eq!(
-        paragraph,
-        vec![
-            TextToken("asdf"),
-            InlineWhitespace(" "),
-            TextToken("fjfj"),
-            InlineWhitespace("  \t "),
-            Math(crate::ast::Math::Inline(" 5 = \\mathbb{N}")),
-            InlineWhitespace("\n"),
-            Ref("123"),
-            InlineWhitespace("\n"),
-            Math(crate::ast::Math::Display("k = 5")),
-        ]
-    );
 }
 
 fn intersperse0<'a, Item, Sep>(
