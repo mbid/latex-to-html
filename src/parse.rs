@@ -302,25 +302,31 @@ pub fn inline_math(i: &str) -> Result<Math> {
 }
 
 pub fn display_math(i: &str) -> Result<Math> {
-    let (i, source) = raw_env("equation")(i)?;
-    Ok((
-        i,
-        Math::Display {
-            source: source,
-            label: None,
-        },
-    ))
+    let (i, mut source) = raw_env("equation")(i)?;
+    let label = match opt(command("label", label_value))(source)? {
+        (_, None) => None,
+        (j, Some(label)) => {
+            let (j, _) = inline_ws(j)?;
+            source = j;
+            Some(label)
+        }
+    };
+
+    Ok((i, Math::Display { source, label }))
 }
 
 pub fn mathpar(i: &str) -> Result<Math> {
-    let (i, source) = raw_env("mathpar")(i)?;
-    Ok((
-        i,
-        Math::Mathpar {
-            source: source,
-            label: None,
-        },
-    ))
+    let (i, mut source) = raw_env("mathpar")(i)?;
+    let label = match opt(command("label", label_value))(source)? {
+        (_, None) => None,
+        (j, Some(label)) => {
+            let (j, _) = inline_ws(j)?;
+            source = j;
+            Some(label)
+        }
+    };
+
+    Ok((i, Math::Mathpar { source, label }))
 }
 
 pub fn label_value(i: &str) -> Result<&str> {
