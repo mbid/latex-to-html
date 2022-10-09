@@ -265,34 +265,13 @@ pub fn take_until<'a, O>(
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct RawContent<'a>(&'a str);
-
-pub fn raw_env<'a>(name: &'static str) -> impl Fn(&'a str) -> Result<'a, RawContent<'a>> {
+pub fn raw_env<'a>(name: &'static str) -> impl Fn(&'a str) -> Result<'a, &'a str> {
     move |i: &'a str| {
         let (i, _) = command("begin", tag(name))(i)?;
         let (i, _) = inline_ws(i)?;
         let (i, (content, _)) = take_until(pair(inline_ws, command("end", tag(name))))(i)?;
-        Ok((i, RawContent(content)))
+        Ok((i, content))
     }
-}
-
-#[test]
-fn test_raw_env() {
-    assert_eq!(
-        raw_env("asdf")("\\begin{asdf}123\\end{asdf}"),
-        Ok(("", RawContent("123")))
-    );
-    assert_eq!(
-        raw_env("asdf")("\\begin{asdf}\n123\n\\end{asdf}"),
-        Ok(("", RawContent("123")))
-    );
-
-    // TODO: This is somewhat questionable -- should we forget about the empty line?
-    assert_eq!(
-        raw_env("asdf")("\\begin{asdf}\n\n\\end{asdf}"),
-        Ok(("", RawContent("")))
-    );
 }
 
 pub fn no_arg_command<'a>(name: &'static str) -> impl FnMut(&'a str) -> Result<()> {
@@ -327,7 +306,7 @@ pub fn display_math(i: &str) -> Result<Math> {
     Ok((
         i,
         Math::Display {
-            source: source.0,
+            source: source,
             label: None,
         },
     ))
@@ -338,7 +317,7 @@ pub fn mathpar(i: &str) -> Result<Math> {
     Ok((
         i,
         Math::Mathpar {
-            source: source.0,
+            source: source,
             label: None,
         },
     ))
