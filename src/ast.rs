@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Math<'a> {
     Inline(&'a str),
@@ -129,10 +127,10 @@ pub struct NodeLists<'a> {
     pub item_lists: Vec<&'a Vec<Item<'a>>>,
 
     // The set of \ref or \eqref values.
-    pub ref_ids: HashSet<&'a str>,
+    pub ref_ids: Vec<&'a str>,
 
     // The set of \cite values.
-    pub cite_ids: HashSet<&'a str>,
+    pub cite_ids: Vec<&'a str>,
 }
 
 impl<'a> NodeLists<'a> {
@@ -140,8 +138,8 @@ impl<'a> NodeLists<'a> {
         let mut result = NodeLists {
             math: Vec::new(),
             item_lists: Vec::new(),
-            ref_ids: HashSet::new(),
-            cite_ids: HashSet::new(),
+            ref_ids: Vec::new(),
+            cite_ids: Vec::new(),
         };
 
         doc.parts.iter().for_each(|part| result.add_doc_part(part));
@@ -184,10 +182,10 @@ impl<'a> NodeLists<'a> {
         match part {
             InlineWhitespace(_) | TextToken(_) | Qed | Todo => (),
             Cite(id) => {
-                self.cite_ids.insert(id);
+                self.cite_ids.push(id);
             }
             Ref(id) => {
-                self.ref_ids.insert(id);
+                self.ref_ids.push(id);
             }
             Math(math) => {
                 self.math.push(math);
