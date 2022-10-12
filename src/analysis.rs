@@ -72,7 +72,7 @@ fn math_numbering<'a>(node_lists: &NodeLists<'a>) -> HashMap<*const Math<'a>, St
     let mut current_number = 0;
     for math in node_lists.math.iter().copied() {
         if let Some(label) = math.label() {
-            if node_lists.ref_ids.iter().find(|l| **l == label).is_some() {
+            if node_lists.ref_ids.contains(label) {
                 current_number += 1;
                 result.insert(math, format!("({current_number})"));
             }
