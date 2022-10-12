@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Math<'a> {
     Inline(&'a str),
@@ -120,9 +122,17 @@ pub struct Document<'a> {
 }
 
 pub struct NodeLists<'a> {
+    // The list of all math nodes.
     pub math: Vec<&'a Math<'a>>,
+
+    // The list containing the list of items for each \itemize or \enumerate.
     pub item_lists: Vec<&'a Vec<Item<'a>>>,
-    pub refs: Vec<&'a str>,
+
+    // The set of \ref or \eqref values.
+    pub ref_ids: HashSet<&'a str>,
+
+    // The set of \cite values.
+    pub cite_ids: HashSet<&'a str>,
 }
 
 impl<'a> NodeLists<'a> {
@@ -130,7 +140,8 @@ impl<'a> NodeLists<'a> {
         let mut result = NodeLists {
             math: Vec::new(),
             item_lists: Vec::new(),
-            refs: Vec::new(),
+            ref_ids: HashSet::new(),
+            cite_ids: HashSet::new(),
         };
 
         doc.parts.iter().for_each(|part| result.add_doc_part(part));
@@ -171,9 +182,12 @@ impl<'a> NodeLists<'a> {
     fn add_par_part(&mut self, part: &'a ParagraphPart<'a>) {
         use ParagraphPart::*;
         match part {
-            InlineWhitespace(_) | TextToken(_) | Qed | Todo | Cite(_) => (),
-            Ref(label_value) => {
-                self.refs.push(label_value);
+            InlineWhitespace(_) | TextToken(_) | Qed | Todo => (),
+            Cite(id) => {
+                self.cite_ids.insert(id);
+            }
+            Ref(id) => {
+                self.ref_ids.insert(id);
             }
             Math(math) => {
                 self.math.push(math);

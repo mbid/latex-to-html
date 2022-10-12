@@ -16,10 +16,10 @@ pub struct Analysis<'a> {
     // The "src" attributes of math images.
     pub math_image_source: HashMap<*const Math<'a>, String>,
 
-    // The text by which references should refer to what they are referencing.
+    // The text by which references to a given id should refer to what they are referencing.
     pub ref_display_text: HashMap<&'a str, String>,
 
-    // The text by which citations should refer to what they are citing.
+    // The text by which citations to a given id should refer to what they are citing.
     pub cite_display_text: HashMap<&'a str, String>,
 }
 
@@ -72,7 +72,7 @@ fn math_numbering<'a>(node_lists: &NodeLists<'a>) -> HashMap<*const Math<'a>, St
     let mut current_number = 0;
     for math in node_lists.math.iter().copied() {
         if let Some(label) = math.label() {
-            if node_lists.refs.iter().find(|l| **l == label).is_some() {
+            if node_lists.ref_ids.iter().find(|l| **l == label).is_some() {
                 current_number += 1;
                 result.insert(math, format!("({current_number})"));
             }
