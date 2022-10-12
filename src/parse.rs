@@ -640,3 +640,120 @@ pub fn document<'a>(i: &'a str) -> Result<Document<'a>> {
     };
     Ok((i, doc))
 }
+
+pub fn bib_ws<'a>(i: &'a str) -> Result<'a, ()> {
+    let (i, _) = take_while(|c| " \t\n".find(c).is_some())(i)?;
+    Ok((i, ()))
+}
+
+pub fn bib_entry_type<'a>(i: &'a str) -> Result<'a, BibEntryType> {
+    use BibEntryType::*;
+    alt((
+        tag("misc").map(|_| Misc),
+        tag("article").map(|_| Article),
+        tag("book").map(|_| Book),
+        tag("inproceedings").map(|_| Inproceedings),
+        tag("thesis").map(|_| Thesis),
+    ))(i)
+}
+
+fn bib_entry_item<'a, 'b, O>(
+    name: &'a str,
+    mut value_parser: impl FnMut(&'a str) -> Result<'a, O>,
+) -> impl FnMut(&'a str) -> Result<'a, O> {
+    move |i| {
+        let (i, _) = tag(name)(i)?;
+        let (i, _) = bib_ws(i)?;
+        let (i, _) = char('=')(i)?;
+        let (i, _) = bib_ws(i)?;
+        let (i, _) = char('{')(i)?;
+        let (i, _) = bib_ws(i)?;
+        let (i, o) = value_parser(i)?;
+        let (i, _) = bib_ws(i)?;
+        let (i, _) = char('}')(i)?;
+        Ok((i, o))
+    }
+}
+
+fn bib_entry_tag<'a>(i: &'a str) -> Result<'a, &'a str> {
+    let (i, val) = take_while(|c| " \t\n,".find(c).is_none())(i)?;
+    Ok((i, val))
+}
+
+fn bib_title_value<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
+    let (i, val) = take_while(|c| c != '{' && c != '}')(i)?;
+    Ok((i, BibEntryItem::Title(val.trim_end())))
+}
+
+fn bib_year_value<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
+    let (i, val) = take_while(|c| c != '{' && c != '}')(i)?;
+    Ok((i, BibEntryItem::Year(val.trim_end())))
+}
+
+fn bib_authors_value<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
+    let (i, val) = take_while(|c| c != '{' && c != '}')(i)?;
+    Ok((i, BibEntryItem::Authors(val.trim_end())))
+}
+
+fn bib_url_value<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
+    let (i, val) = take_while(|c| c != '{' && c != '}')(i)?;
+    Ok((i, BibEntryItem::Url(val.trim_end())))
+}
+
+pub fn bib_entry<'a>(i: &'a str) -> Result<'a, BibEntry<'a>> {
+    let (i, _) = char('@')(i)?;
+    let (i, entry_type) = bib_entry_type(i)?;
+    let (i, _) = bib_ws(i)?;
+    let (i, _) = char('{')(i)?;
+    let (i, _) = bib_ws(i)?;
+
+    let (i, tag) = bib_entry_tag(i)?;
+
+    let (i, _) = bib_ws(i)?;
+    let (i, _) = char(',')(i)?;
+    let (i, _) = bib_ws(i)?;
+
+    let title = bib_entry_item("title", bib_title_value);
+    let year = bib_entry_item("year", bib_year_value);
+    let author = bib_entry_item("author", bib_authors_value);
+    let authors = bib_entry_item("authors", bib_authors_value);
+    let url = bib_entry_item("url", bib_url_value);
+
+    let item = alt((title, year, author, authors, url));
+    let item_sep = tuple((bib_ws, char(','), bib_ws));
+    let (i, items) = intersperse0(item, item_sep)(i)?;
+
+    let (i, _) = bib_ws(i)?;
+    let (i, _) = char('}')(i)?;
+
+    Ok((
+        i,
+        BibEntry {
+            tag,
+            entry_type,
+            items,
+        },
+    ))
+}
+
+#[test]
+fn test_bib_entry() {
+    let src = indoc::indoc! {"
+        @book{hovey-model-categories,
+          title={Model categories},
+          author={Hovey, Mark},
+          year={2007}
+        }"};
+
+    let (i, entry) = bib_entry(src).unwrap();
+    assert!(i.is_empty());
+    assert_eq!(entry.entry_type, BibEntryType::Book);
+    assert_eq!(entry.items.len(), 3);
+}
+
+pub fn bib<'a>(i: &'a str) -> Result<'a, Vec<BibEntry<'a>>> {
+    let (i, _) = bib_ws(i)?;
+    let (i, entries) = intersperse0(bib_entry, bib_ws)(i)?;
+    let (i, _) = bib_ws(i)?;
+    Ok((i, entries))
+}

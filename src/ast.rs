@@ -193,3 +193,27 @@ impl<'a> NodeLists<'a> {
         }
     }
 }
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BibEntryType {
+    Misc,
+    Article,
+    Book,
+    Inproceedings,
+    Thesis,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BibEntryItem<'a> {
+    Title(&'a str),
+    Year(&'a str),
+    Authors(&'a str),
+    Url(&'a str),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BibEntry<'a> {
+    pub entry_type: BibEntryType,
+    pub tag: &'a str,
+    pub items: Vec<BibEntryItem<'a>>,
+}
