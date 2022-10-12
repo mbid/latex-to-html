@@ -18,12 +18,12 @@ fn doit() {
     use crate::parse::{bib, document};
 
     let bib_src = std::fs::read_to_string("example.bib").unwrap();
-    let (i, _) = bib(bib_src.as_str()).unwrap();
+    let (i, bib_entries) = bib(bib_src.as_str()).unwrap();
     assert!(i.is_empty());
 
     let src = std::fs::read_to_string("example.tex").unwrap();
     let (i, doc) = document(src.as_str()).unwrap();
     assert!(i.is_empty());
 
-    emit(std::path::Path::new("out"), &doc);
+    emit(std::path::Path::new("out"), &doc, &bib_entries);
 }

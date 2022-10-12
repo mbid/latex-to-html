@@ -138,6 +138,11 @@ fn display_paragraph_part<'a>(
                 let value = display_label_value(value);
                 write!(out, "<a href=\"#{value}\">{name}</a>")?;
             }
+            Cite(value) => {
+                // TODO: Find a good name to display.
+                let value = display_cite_value(value);
+                write!(out, "<a href=\"#{value}\">???</a>")?;
+            }
             Emph(child_paragraph) => {
                 write!(out, "<emph>")?;
                 for part in child_paragraph.iter() {
@@ -210,6 +215,10 @@ fn display_label_value(label_value: &str) -> impl '_ + Display {
     label_value.replace(":", "-").to_case(Case::Kebab)
 }
 
+fn display_cite_value(label_value: &str) -> impl '_ + Display {
+    label_value.replace(":", "-").to_case(Case::Kebab)
+}
+
 fn display_theorem_header<'a>(
     data: &'a EmitData,
     name: &'a Paragraph<'a>,
@@ -246,7 +255,8 @@ fn display_title<'a>(title: Option<&'a Paragraph<'a>>) -> impl 'a + Display {
                                 write!(out, " ")?;
                             }
                         }
-                        Math(_) | Ref(_) | Emph(_) | Qed | Enumerate(_) | Itemize(_) | Todo => {
+                        Math(_) | Ref(_) | Emph(_) | Qed | Enumerate(_) | Itemize(_) | Todo
+                        | Cite(_) => {
                             panic!("Invalid node in title");
                         }
                     }
@@ -257,7 +267,56 @@ fn display_title<'a>(title: Option<&'a Paragraph<'a>>) -> impl 'a + Display {
     })
 }
 
-fn write_index(out: &mut impl Write, doc: &Document, data: &EmitData) -> Result {
+fn display_bib_entry<'a>(entry: &'a BibEntry<'a>) -> impl 'a + Display {
+    let title: Option<&str> = entry.items.iter().find_map(|item| {
+        if let BibEntryItem::Title(title) = item {
+            Some(*title)
+        } else {
+            None
+        }
+    });
+
+    let authors: Option<&str> = entry.items.iter().find_map(|item| {
+        if let BibEntryItem::Authors(authors) = item {
+            Some(*authors)
+        } else {
+            None
+        }
+    });
+
+    let id_attr_value = display_cite_value(entry.tag);
+
+    DisplayFn(move |out: &mut Formatter| {
+        writedoc! {out, r#"
+            <div id="{id_attr_value}" class="bib-entry">
+        "#}?;
+        if let Some(title) = title {
+            writedoc!(
+                out,
+                "
+                {title}.
+            "
+            )?;
+        }
+        if let Some(authors) = authors {
+            writedoc!(
+                out,
+                "
+                {authors}.
+            "
+            )?;
+        }
+        writedoc! {out, r#"</div>"#}?;
+        Ok(())
+    })
+}
+
+fn write_index(
+    out: &mut impl Write,
+    doc: &Document,
+    bib_entries: &[BibEntry],
+    data: &EmitData,
+) -> Result {
     let title: Option<&Paragraph> = doc.parts.iter().find_map(|part| {
         if let DocumentPart::Title(title) = part {
             Some(title)
@@ -389,6 +448,17 @@ fn write_index(out: &mut impl Write, doc: &Document, data: &EmitData) -> Result 
                     </div>
                 "#}?;
             }
+            Bibliography => {
+                writedoc! {out, r#"
+                    <h2>Bibliography</h2>
+                "#}?;
+                for entry in bib_entries {
+                    let entry = display_bib_entry(entry);
+                    writedoc! {out, r#"
+                        {entry}
+                    "#}?;
+                }
+            }
         }
     }
     writedoc! {out, r#"
@@ -506,14 +576,14 @@ const STYLE: &'static str = indoc! {r#"
         visibility: hidden;
     }"#};
 
-pub fn emit(root: &Path, doc: &Document) {
+pub fn emit(root: &Path, doc: &Document, bib_entries: &[BibEntry]) {
     let node_lists = NodeLists::new(doc);
     let data = EmitData::new(doc, &node_lists);
 
     fs::create_dir_all(root).unwrap();
 
     let mut index_src = String::new();
-    write_index(&mut index_src, &doc, &data).unwrap();
+    write_index(&mut index_src, &doc, &bib_entries, &data).unwrap();
 
     let index_path = root.join("index.html");
     let mut index_file = std::fs::OpenOptions::new()

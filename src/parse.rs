@@ -333,6 +333,10 @@ pub fn label_value(i: &str) -> Result<&str> {
     take_while1(|c: char| "-_:".find(c).is_some() || c.is_ascii_alphanumeric())(i)
 }
 
+pub fn cite_value(i: &str) -> Result<&str> {
+    take_while1(|c: char| "-_:".find(c).is_some() || c.is_ascii_alphanumeric())(i)
+}
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Ref<'a>(&'a str);
 
@@ -357,6 +361,11 @@ pub fn paragraph_qed(i: &str) -> Result<ParagraphPart> {
 pub fn eqref(i: &str) -> Result<ParagraphPart> {
     let (i, val) = command("eqref", label_value)(i)?;
     Ok((i, ParagraphPart::Ref(val)))
+}
+
+pub fn cite(i: &str) -> Result<ParagraphPart> {
+    let (i, val) = command("cite", cite_value)(i)?;
+    Ok((i, ParagraphPart::Cite(val)))
 }
 
 pub fn item(i: &str) -> Result<Item> {
@@ -419,6 +428,7 @@ pub fn paragraph<'a>(i: &'a str) -> Result<Paragraph<'a>> {
             mathpar.map(ParagraphPart::Math),
             ref_command,
             eqref,
+            cite,
             emph,
             paragraph_qed,
             itemize,
@@ -569,6 +579,11 @@ pub fn proof<'a>(i: &'a str) -> Result<DocumentPart<'a>> {
     env("proof", paragraphs0).map(DocumentPart::Proof).parse(i)
 }
 
+pub fn bibliography<'a>(i: &'a str) -> Result<'a, DocumentPart<'a>> {
+    let (i, _) = command("bibliography", take_while(|c| c != '{' && c != '}'))(i)?;
+    Ok((i, DocumentPart::Bibliography))
+}
+
 pub fn document_part<'a, 'b>(
     config: &'b DocumentConfig<'a>,
     i: &'a str,
@@ -586,6 +601,7 @@ pub fn document_part<'a, 'b>(
         abstract_env,
         theorem_like,
         proof,
+        bibliography,
     ))(i)?;
     Ok((i, part))
 }

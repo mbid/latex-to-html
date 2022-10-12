@@ -33,6 +33,7 @@ pub enum ParagraphPart<'a> {
     TextToken(&'a str),
     Math(Math<'a>),
     Ref(&'a str),
+    Cite(&'a str),
     Emph(Paragraph<'a>),
     Qed,
     Enumerate(Vec<Item<'a>>),
@@ -70,6 +71,7 @@ pub enum DocumentPart<'a> {
         label: Option<&'a str>,
     },
     Proof(Vec<Paragraph<'a>>),
+    Bibliography,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -138,7 +140,7 @@ impl<'a> NodeLists<'a> {
     fn add_doc_part(&mut self, part: &'a DocumentPart<'a>) {
         use DocumentPart::*;
         match part {
-            Date() | Maketitle() => (),
+            Date() | Maketitle() | Bibliography => (),
             FreeParagraph(par)
             | Title(par)
             | Author(par)
@@ -169,7 +171,7 @@ impl<'a> NodeLists<'a> {
     fn add_par_part(&mut self, part: &'a ParagraphPart<'a>) {
         use ParagraphPart::*;
         match part {
-            InlineWhitespace(_) | TextToken(_) | Qed | Todo => (),
+            InlineWhitespace(_) | TextToken(_) | Qed | Todo | Cite(_) => (),
             Ref(label_value) => {
                 self.refs.push(label_value);
             }
