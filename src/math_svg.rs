@@ -242,12 +242,16 @@ pub fn hash_math(preamble: &str, math: &Math) -> MathDigest {
     MathDigest(hasher.finalize().as_slice().try_into().unwrap())
 }
 
+pub const SVG_OUT_DIR: &'static str = "img-math";
+
 pub fn emit_math_svg_files<'a, 'b>(
     out_dir: &'a Path,
     preamble: &str,
     math: impl Iterator<Item = &'b Math<'b>>,
 ) {
     fs::create_dir_all(out_dir).unwrap();
+
+    let out_dir = out_dir.join(SVG_OUT_DIR);
 
     let offsets_path = out_dir.join("offsets.css");
     let mut offsets_file = OpenOptions::new()

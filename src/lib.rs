@@ -1,3 +1,4 @@
+pub mod analysis;
 pub mod ast;
 pub mod emit;
 pub mod math_svg;
@@ -14,16 +15,27 @@ fn parse_eqlog_paper() {
 
 #[test]
 fn doit() {
+    use crate::analysis::Analysis;
+    use crate::ast::NodeLists;
     use crate::emit::emit;
+    use crate::math_svg::emit_math_svg_files;
     use crate::parse::{bib, document};
 
+    // Parse the bibliography file.
     let bib_src = std::fs::read_to_string("example.bib").unwrap();
     let (i, bib_entries) = bib(bib_src.as_str()).unwrap();
     assert!(i.is_empty());
 
+    // Parse the latex file.
     let src = std::fs::read_to_string("example.tex").unwrap();
     let (i, doc) = document(src.as_str()).unwrap();
     assert!(i.is_empty());
 
-    emit(std::path::Path::new("out"), &doc, &bib_entries);
+    // Generate lists of nodes and analyze the bib/latex asts.
+    let node_lists = NodeLists::new(&doc);
+    let analysis = Analysis::new(&doc, &node_lists);
+
+    let out_path = std::path::Path::new("out");
+    emit(&out_path, &doc, &bib_entries, &analysis);
+    emit_math_svg_files(&out_path, &doc.preamble, node_lists.math.iter().copied());
 }

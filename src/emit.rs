@@ -1,33 +1,27 @@
+use crate::analysis::*;
 use crate::ast::*;
 use crate::math_svg::*;
 use crate::util::*;
 use convert_case::{Case, Casing};
 use indoc::{indoc, writedoc};
-use std::collections::HashMap;
 use std::fmt::{Display, Formatter, Result, Write};
 use std::fs;
 use std::io::Write as IoWrite;
 use std::path::Path;
+use std::ptr::addr_of;
 use std::write;
 
-const SVG_OUT_DIR: &'static str = "img-math";
-
-fn display_math<'a>(
-    preamble: &'a str,
-    math_numbering: &'a HashMap<*const Math<'a>, String>,
-    math: &'a Math<'a>,
-) -> impl 'a + Display {
+fn display_math<'a>(analysis: &'a Analysis<'a>, math: &'a Math<'a>) -> impl 'a + Display {
+    let src = analysis.math_image_source.get(&addr_of!(*math)).unwrap();
+    let number = analysis.math_numbering.get(&addr_of!(*math));
     DisplayFn(move |out: &mut Formatter| {
-        let digest = hash_math(preamble, math);
-        let path = format!("img-math/{digest}.svg");
         use Math::*;
         match math {
             Inline(_) => {
-                write!(out, r#"<img src="{path}" class="inline-math">"#)?;
+                write!(out, r#"<img src="{src}" class="inline-math">"#)?;
             }
             Display { source: _, label } | Mathpar { source: _, label } => {
                 let id_attr = display_label_id_attr(*label);
-                let number = math_numbering.get(&std::ptr::addr_of!(*math));
                 writedoc! {out, r#"
                     <div{id_attr} class="display-math-row">
                 "#}?;
@@ -38,7 +32,7 @@ fn display_math<'a>(
                     "#}?;
                 }
                 writedoc! {out, r#"
-                    <img src="{path}">
+                    <img src="{src}">
                 "#}?;
                 if let Some(number) = number {
                     writedoc! {out, r#"
@@ -51,47 +45,6 @@ fn display_math<'a>(
         }
         Ok(())
     })
-}
-
-fn assign_math_numberings<'a>(node_lists: &NodeLists<'a>) -> HashMap<*const Math<'a>, String> {
-    let mut result: HashMap<*const Math<'a>, String> = HashMap::new();
-    let mut current_number = 0;
-    for math in node_lists.math.iter().copied() {
-        if let Some(label) = math.label() {
-            if node_lists.refs.iter().find(|l| **l == label).is_some() {
-                current_number += 1;
-                result.insert(math, format!("({current_number})"));
-            }
-        }
-    }
-    result
-}
-
-struct EmitData<'a> {
-    preamble: &'a str,
-    // The number strings assigned to theorem-like document parts:
-    // - TheoremLike
-    // - Section
-    // - Subsection
-    numbering: HashMap<*const DocumentPart<'a>, String>,
-    // Number strings assigned to equations.
-    math_numbering: HashMap<*const Math<'a>, String>,
-    // The text by which references should refer to what they are referencing.
-    label_names: HashMap<&'a str, String>,
-}
-
-impl<'a> EmitData<'a> {
-    fn new(doc: &'a Document<'a>, node_lists: &NodeLists<'a>) -> Self {
-        let numbering = assign_numberings(doc);
-        let math_numbering = assign_math_numberings(node_lists);
-        let label_names = assign_label_names(doc, node_lists, &numbering, &math_numbering);
-        EmitData {
-            preamble: &doc.preamble,
-            numbering,
-            math_numbering,
-            label_names,
-        }
-    }
 }
 
 fn display_label_id_attr(label_value: Option<&str>) -> impl '_ + Display {
@@ -108,7 +61,7 @@ fn display_label_id_attr(label_value: Option<&str>) -> impl '_ + Display {
 }
 
 fn display_paragraph_part<'a>(
-    data: &'a EmitData<'a>,
+    analysis: &'a Analysis<'a>,
     part: &'a ParagraphPart,
 ) -> impl 'a + Display {
     DisplayFn(move |out: &mut Formatter| {
@@ -124,14 +77,10 @@ fn display_paragraph_part<'a>(
             }
             TextToken(tok) => out.write_str(tok)?,
             Math(math) => {
-                write!(
-                    out,
-                    "{}",
-                    display_math(data.preamble, &data.math_numbering, math)
-                )?;
+                write!(out, "{}", display_math(analysis, math))?;
             }
             Ref(value) => {
-                let name = match data.label_names.get(value) {
+                let name = match analysis.ref_display_text.get(value) {
                     None => "???",
                     Some(name) => name.as_str(),
                 };
@@ -146,7 +95,7 @@ fn display_paragraph_part<'a>(
             Emph(child_paragraph) => {
                 write!(out, "<emph>")?;
                 for part in child_paragraph.iter() {
-                    write!(out, "{}", display_paragraph_part(data, part))?;
+                    write!(out, "{}", display_paragraph_part(analysis, part))?;
                 }
                 write!(out, "</emph>")?;
             }
@@ -157,7 +106,7 @@ fn display_paragraph_part<'a>(
                     assert!(item.label.is_none());
                     write!(out, "<li>\n")?;
                     for paragraph in item.content.iter() {
-                        display_paragraph(data, paragraph).fmt(out)?;
+                        display_paragraph(analysis, paragraph).fmt(out)?;
                     }
                     write!(out, "</li>\n")?;
                 }
@@ -169,7 +118,7 @@ fn display_paragraph_part<'a>(
                     let id_attr = display_label_id_attr(item.label);
                     write!(out, "<li{id_attr}>\n")?;
                     for paragraph in item.content.iter() {
-                        display_paragraph(data, paragraph).fmt(out)?;
+                        display_paragraph(analysis, paragraph).fmt(out)?;
                     }
                     write!(out, "</li>\n")?;
                 }
@@ -181,13 +130,16 @@ fn display_paragraph_part<'a>(
     })
 }
 
-fn display_paragraph<'a>(data: &'a EmitData<'a>, paragraph: &'a Paragraph) -> impl 'a + Display {
+fn display_paragraph<'a>(
+    analysis: &'a Analysis<'a>,
+    paragraph: &'a Paragraph,
+) -> impl 'a + Display {
     DisplayFn(|out: &mut Formatter| {
         writedoc! {out, r#"
             <div class="paragraph">
         "#}?;
         for part in paragraph.iter() {
-            write!(out, "{}", display_paragraph_part(data, part))?;
+            write!(out, "{}", display_paragraph_part(analysis, part))?;
         }
         writedoc! {out, r#"
             </div>
@@ -220,14 +172,14 @@ fn display_cite_value(label_value: &str) -> impl '_ + Display {
 }
 
 fn display_theorem_header<'a>(
-    data: &'a EmitData,
+    analysis: &'a Analysis,
     name: &'a Paragraph<'a>,
     number: Option<&'a str>,
 ) -> impl 'a + Display {
     DisplayFn(move |out: &mut Formatter| {
         write!(out, "<h4>")?;
         for part in name.iter() {
-            write!(out, "{}", display_paragraph_part(data, part))?;
+            write!(out, "{}", display_paragraph_part(analysis, part))?;
         }
         if let Some(number) = number {
             write!(out, " {number}")?;
@@ -315,7 +267,7 @@ fn write_index(
     out: &mut impl Write,
     doc: &Document,
     bib_entries: &[BibEntry],
-    data: &EmitData,
+    analysis: &Analysis,
 ) -> Result {
     let title: Option<&Paragraph> = doc.parts.iter().find_map(|part| {
         if let DocumentPart::Title(title) = part {
@@ -339,7 +291,7 @@ fn write_index(
         use DocumentPart::*;
         match part {
             FreeParagraph(p) => {
-                write!(out, "{}", display_paragraph(data, p))?;
+                write!(out, "{}", display_paragraph(analysis, p))?;
             }
             Title(_) => (),
             Author(_) => (),
@@ -355,37 +307,37 @@ fn write_index(
             Section { name, label } => {
                 let label = display_label_id_attr(*label);
                 write!(out, "<h2{label}>\n")?;
-                let number = data
-                    .numbering
+                let number = analysis
+                    .doc_part_numbering
                     .get(&std::ptr::addr_of!(*part))
                     .map(|s| s.as_str());
                 if let Some(number) = number {
                     write!(out, "{number} ")?;
                 }
                 for part in name {
-                    write!(out, "{}", display_paragraph_part(data, part))?;
+                    write!(out, "{}", display_paragraph_part(analysis, part))?;
                 }
                 write!(out, "</h2>\n")?;
             }
             Subsection { name, label } => {
                 let label = display_label_id_attr(*label);
                 write!(out, "<h3{label}>\n")?;
-                let number = data
-                    .numbering
+                let number = analysis
+                    .doc_part_numbering
                     .get(&std::ptr::addr_of!(*part))
                     .map(|s| s.as_str());
                 if let Some(number) = number {
                     write!(out, "{number} ")?;
                 }
                 for part in name {
-                    write!(out, "{}", display_paragraph_part(data, part))?;
+                    write!(out, "{}", display_paragraph_part(analysis, part))?;
                 }
                 write!(out, "</h3>\n")?;
             }
             Abstract(ps) => {
                 write!(out, "<h2>Abstract</h2>\n")?;
                 for p in ps {
-                    write!(out, "{}", display_paragraph(data, p))?;
+                    write!(out, "{}", display_paragraph(analysis, p))?;
                 }
             }
             TheoremLike {
@@ -399,11 +351,11 @@ fn write_index(
                     .find(|config| &config.tag == tag)
                     .unwrap();
                 let label = display_label_id_attr(*label);
-                let number = data
-                    .numbering
+                let number = analysis
+                    .doc_part_numbering
                     .get(&std::ptr::addr_of!(*part))
                     .map(|s| s.as_str());
-                let header = display_theorem_header(data, &theorem_like_config.name, number);
+                let header = display_theorem_header(analysis, &theorem_like_config.name, number);
                 writedoc! {out, r#"
                     <div{label} class="theorem-like">
                     <div class="paragraph">
@@ -413,14 +365,14 @@ fn write_index(
                 let mut content = content.iter();
                 if let Some(parag) = content.next() {
                     for part in parag {
-                        write!(out, "{}", display_paragraph_part(data, part))?;
+                        write!(out, "{}", display_paragraph_part(analysis, part))?;
                     }
                 }
                 writedoc! {out, r#"
                     </div>
                 "#}?;
                 for parag in content {
-                    write!(out, "{}", display_paragraph(data, parag))?;
+                    write!(out, "{}", display_paragraph(analysis, parag))?;
                 }
                 writedoc! {out, r#"
                     </div>
@@ -435,14 +387,14 @@ fn write_index(
                 let mut ps = ps.iter();
                 if let Some(parag) = ps.next() {
                     for part in parag {
-                        write!(out, "{}", display_paragraph_part(data, part))?;
+                        write!(out, "{}", display_paragraph_part(analysis, part))?;
                     }
                 }
                 writedoc! {out, r#"
                     </div>
                 "#}?;
                 for p in ps {
-                    write!(out, "{}", display_paragraph(data, p))?;
+                    write!(out, "{}", display_paragraph(analysis, p))?;
                 }
                 writedoc! {out, r#"
                     </div>
@@ -467,70 +419,6 @@ fn write_index(
     "#}?;
 
     Ok(())
-}
-
-pub fn assign_numberings<'a>(doc: &Document<'a>) -> HashMap<*const DocumentPart<'a>, String> {
-    let mut map: HashMap<*const DocumentPart<'a>, String> = HashMap::new();
-    let mut current_theorem_like = 0;
-    let mut current_section = 0;
-    let mut current_subsection = 0;
-    for part in doc.parts.iter() {
-        match part {
-            DocumentPart::TheoremLike { .. } => {
-                current_theorem_like += 1;
-                map.insert(part, current_theorem_like.to_string());
-            }
-            DocumentPart::Section { .. } => {
-                current_section += 1;
-                current_subsection = 0;
-                map.insert(part, current_section.to_string());
-            }
-            DocumentPart::Subsection { .. } => {
-                current_subsection += 1;
-                map.insert(part, format!("{current_section}.{current_subsection}"));
-            }
-            _ => (),
-        }
-    }
-    map
-}
-
-pub fn assign_label_names<'a>(
-    doc: &Document<'a>,
-    node_lists: &NodeLists<'a>,
-    numbering: &HashMap<*const DocumentPart, String>,
-    math_numbering: &HashMap<*const Math, String>,
-) -> HashMap<&'a str, String> {
-    let mut names = HashMap::new();
-    for part in doc.parts.iter() {
-        use DocumentPart::*;
-        match part {
-            TheoremLike { label, .. } | Section { label, .. } | Subsection { label, .. } => {
-                if let Some(label) = label {
-                    let number = numbering.get(&std::ptr::addr_of!(*part)).unwrap();
-                    names.insert(*label, number.clone());
-                }
-            }
-            _ => (),
-        }
-    }
-
-    for item_list in node_lists.item_lists.iter() {
-        for (i, item) in item_list.iter().enumerate() {
-            if let Some(label) = item.label {
-                names.insert(label, (i + 1).to_string());
-            }
-        }
-    }
-
-    for math in node_lists.math.iter().copied() {
-        if let Some(label) = math.label() {
-            if let Some(number) = math_numbering.get(&std::ptr::addr_of!(*math)) {
-                names.insert(label, number.clone());
-            }
-        }
-    }
-    names
 }
 
 const STYLE: &'static str = indoc! {r#"
@@ -576,14 +464,11 @@ const STYLE: &'static str = indoc! {r#"
         visibility: hidden;
     }"#};
 
-pub fn emit(root: &Path, doc: &Document, bib_entries: &[BibEntry]) {
-    let node_lists = NodeLists::new(doc);
-    let data = EmitData::new(doc, &node_lists);
-
+pub fn emit(root: &Path, doc: &Document, bib_entries: &[BibEntry], analysis: &Analysis) {
     fs::create_dir_all(root).unwrap();
 
     let mut index_src = String::new();
-    write_index(&mut index_src, &doc, &bib_entries, &data).unwrap();
+    write_index(&mut index_src, &doc, &bib_entries, &analysis).unwrap();
 
     let index_path = root.join("index.html");
     let mut index_file = std::fs::OpenOptions::new()
@@ -602,7 +487,4 @@ pub fn emit(root: &Path, doc: &Document, bib_entries: &[BibEntry]) {
         .open(style_path)
         .unwrap();
     write!(style_path, "{STYLE}").unwrap();
-
-    let svg_out_dir = root.join(SVG_OUT_DIR);
-    emit_math_svg_files(&svg_out_dir, &doc.preamble, node_lists.math.iter().copied());
 }
