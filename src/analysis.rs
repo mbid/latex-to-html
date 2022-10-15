@@ -1,5 +1,6 @@
 use crate::ast::*;
 use crate::math_svg::*;
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::ptr::addr_of;
 
@@ -19,23 +20,33 @@ pub struct Analysis<'a> {
     // The text by which references to a given id should refer to what they are referencing.
     pub ref_display_text: HashMap<&'a str, String>,
 
+    // The list of bibliography entries that should be displayed. In the order as they should be
+    // displayed.
+    pub bib_entries: Vec<&'a BibEntry<'a>>,
+
     // The text by which citations to a given id should refer to what they are citing.
     pub cite_display_text: HashMap<&'a str, String>,
 }
 
 impl<'a> Analysis<'a> {
-    pub fn new(doc: &'a Document<'a>, node_lists: &NodeLists<'a>) -> Self {
+    pub fn new(
+        doc: &'a Document<'a>,
+        all_bib_entries: &'a [BibEntry<'a>],
+        node_lists: &'a NodeLists<'a>,
+    ) -> Self {
         let doc_part_numbering = doc_part_numbering(doc);
         let math_numbering = math_numbering(node_lists);
         let math_image_source = math_image_source(doc, node_lists);
         let ref_display_text =
             ref_display_text(doc, node_lists, &doc_part_numbering, &math_numbering);
-        let cite_display_text = HashMap::new(); // TODO
+        let bib_entries = bib_entries(all_bib_entries, node_lists);
+        let cite_display_text = cite_display_text(bib_entries.iter().copied());
         Analysis {
             doc_part_numbering,
             math_numbering,
             math_image_source,
             ref_display_text,
+            bib_entries,
             cite_display_text,
         }
     }
@@ -132,4 +143,42 @@ fn ref_display_text<'a>(
         }
     }
     text
+}
+
+fn bib_entries<'a>(
+    all_bib_entries: &'a [BibEntry<'a>],
+    node_lists: &'a NodeLists<'a>,
+) -> Vec<&'a BibEntry<'a>> {
+    let mut result: Vec<&'a BibEntry> = all_bib_entries
+        .iter()
+        .filter(|entry| node_lists.cite_ids.contains(entry.tag))
+        .collect();
+    result.sort_unstable_by(|lhs, rhs| {
+        let lhs_authors = lhs.items.iter().find_map(|item| match item {
+            BibEntryItem::Authors(authors) => Some(authors),
+            _ => None,
+        });
+        let rhs_authors = rhs.items.iter().find_map(|item| match item {
+            BibEntryItem::Authors(authors) => Some(authors),
+            _ => None,
+        });
+
+        match (lhs_authors, rhs_authors) {
+            (None, _) => Ordering::Less,
+            (_, None) => Ordering::Greater,
+            (Some(lhs_authors), Some(rhs_authors)) => lhs_authors.cmp(rhs_authors),
+        }
+    });
+    result
+}
+
+fn cite_display_text<'a>(
+    bib_entries: impl Iterator<Item = &'a BibEntry<'a>>,
+) -> HashMap<&'a str, String> {
+    let mut result = HashMap::new();
+    for (i, entry) in bib_entries.enumerate() {
+        let i = i + 1;
+        result.insert(entry.tag, format!("[{i}]"));
+    }
+    result
 }

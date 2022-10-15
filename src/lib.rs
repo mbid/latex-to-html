@@ -33,9 +33,9 @@ fn doit() {
 
     // Generate lists of nodes and analyze the bib/latex asts.
     let node_lists = NodeLists::new(&doc);
-    let analysis = Analysis::new(&doc, &node_lists);
+    let analysis = Analysis::new(&doc, &bib_entries, &node_lists);
 
     let out_path = std::path::Path::new("out");
-    emit(&out_path, &doc, &bib_entries, &analysis);
+    emit(&out_path, &doc, &analysis);
     emit_math_svg_files(&out_path, &doc.preamble, node_lists.math.iter().copied());
 }

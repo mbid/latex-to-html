@@ -88,9 +88,12 @@ fn display_paragraph_part<'a>(
                 write!(out, "<a href=\"#{value}\">{name}</a>")?;
             }
             Cite(value) => {
-                // TODO: Find a good name to display.
+                let display_text = match analysis.cite_display_text.get(value) {
+                    None => "???",
+                    Some(name) => name.as_str(),
+                };
                 let value = display_cite_value(value);
-                write!(out, "<a href=\"#{value}\">???</a>")?;
+                write!(out, "<a href=\"#{value}\">{display_text}</a>")?;
             }
             Emph(child_paragraph) => {
                 write!(out, "<emph>")?;
@@ -219,7 +222,7 @@ fn display_title<'a>(title: Option<&'a Paragraph<'a>>) -> impl 'a + Display {
     })
 }
 
-fn display_bib_entry<'a>(entry: &'a BibEntry<'a>) -> impl 'a + Display {
+fn display_bib_entry<'a>(analysis: &'a Analysis<'a>, entry: &'a BibEntry<'a>) -> impl 'a + Display {
     let title: Option<&str> = entry.items.iter().find_map(|item| {
         if let BibEntryItem::Title(title) = item {
             Some(*title)
@@ -236,39 +239,27 @@ fn display_bib_entry<'a>(entry: &'a BibEntry<'a>) -> impl 'a + Display {
         }
     });
 
+    let cite_display_text = analysis.cite_display_text.get(entry.tag).unwrap();
+
     let id_attr_value = display_cite_value(entry.tag);
 
     DisplayFn(move |out: &mut Formatter| {
         writedoc! {out, r#"
             <div id="{id_attr_value}" class="bib-entry">
         "#}?;
+        write!(out, "{cite_display_text} ")?;
         if let Some(title) = title {
-            writedoc!(
-                out,
-                "
-                {title}.
-            "
-            )?;
+            write!(out, "{title}.")?;
         }
         if let Some(authors) = authors {
-            writedoc!(
-                out,
-                "
-                {authors}.
-            "
-            )?;
+            write!(out, "{authors}.")?;
         }
         writedoc! {out, r#"</div>"#}?;
         Ok(())
     })
 }
 
-fn write_index(
-    out: &mut impl Write,
-    doc: &Document,
-    bib_entries: &[BibEntry],
-    analysis: &Analysis,
-) -> Result {
+fn write_index(out: &mut impl Write, doc: &Document, analysis: &Analysis) -> Result {
     let title: Option<&Paragraph> = doc.parts.iter().find_map(|part| {
         if let DocumentPart::Title(title) = part {
             Some(title)
@@ -404,8 +395,8 @@ fn write_index(
                 writedoc! {out, r#"
                     <h2>Bibliography</h2>
                 "#}?;
-                for entry in bib_entries {
-                    let entry = display_bib_entry(entry);
+                for entry in analysis.bib_entries.iter().copied() {
+                    let entry = display_bib_entry(analysis, entry);
                     writedoc! {out, r#"
                         {entry}
                     "#}?;
@@ -464,11 +455,11 @@ const STYLE: &'static str = indoc! {r#"
         visibility: hidden;
     }"#};
 
-pub fn emit(root: &Path, doc: &Document, bib_entries: &[BibEntry], analysis: &Analysis) {
+pub fn emit(root: &Path, doc: &Document, analysis: &Analysis) {
     fs::create_dir_all(root).unwrap();
 
     let mut index_src = String::new();
-    write_index(&mut index_src, &doc, &bib_entries, &analysis).unwrap();
+    write_index(&mut index_src, &doc, &analysis).unwrap();
 
     let index_path = root.join("index.html");
     let mut index_file = std::fs::OpenOptions::new()
