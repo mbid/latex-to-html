@@ -251,9 +251,8 @@ fn display_bib_entry<'a>(analysis: &'a Analysis<'a>, entry: &'a BibEntry<'a>) ->
 
     DisplayFn(move |out: &mut Formatter| {
         writedoc! {out, r#"
-            <div id="{id_attr_value}" class="bib-entry">
+            <li id="{id_attr_value}">
         "#}?;
-        write!(out, "{cite_display_text}")?;
         match authors.as_deref() {
             None | Some([]) => (),
             Some([author]) => {
@@ -270,7 +269,7 @@ fn display_bib_entry<'a>(analysis: &'a Analysis<'a>, entry: &'a BibEntry<'a>) ->
         if let Some(title) = title {
             write!(out, " {title}.")?;
         }
-        writedoc! {out, r#"</div>"#}?;
+        writedoc! {out, r#"</li>"#}?;
         Ok(())
     })
 }
@@ -410,6 +409,7 @@ fn write_index(out: &mut impl Write, doc: &Document, analysis: &Analysis) -> Res
             Bibliography => {
                 writedoc! {out, r#"
                     <h2>Bibliography</h2>
+                    <ol class="bibliography">
                 "#}?;
                 for entry in analysis.bib_entries.iter().copied() {
                     let entry = display_bib_entry(analysis, entry);
@@ -417,6 +417,9 @@ fn write_index(out: &mut impl Write, doc: &Document, analysis: &Analysis) -> Res
                         {entry}
                     "#}?;
                 }
+                writedoc! {out, r#"
+                    </ol>
+                "#}?;
             }
         }
     }
@@ -469,6 +472,18 @@ const STYLE: &'static str = indoc! {r#"
 
     .display-math-row > span:first-child {
         visibility: hidden;
+    }
+
+    .bibliography {
+      counter-reset: list;
+    }
+
+    .bibliography > li {
+      counter-increment: list;
+    }
+
+    .bibliography > li::marker {
+      content: "["counter(list)"] ";
     }"#};
 
 pub fn emit(root: &Path, doc: &Document, analysis: &Analysis) {
