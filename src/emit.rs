@@ -223,21 +223,8 @@ fn display_title<'a>(title: Option<&'a Paragraph<'a>>) -> impl 'a + Display {
 }
 
 fn display_bib_entry<'a>(analysis: &'a Analysis<'a>, entry: &'a BibEntry<'a>) -> impl 'a + Display {
-    let title: Option<&str> = entry.items.iter().find_map(|item| {
-        if let BibEntryItem::Title(title) = item {
-            Some(*title)
-        } else {
-            None
-        }
-    });
-
-    let authors: Option<&str> = entry.items.iter().find_map(|item| {
-        if let BibEntryItem::Authors(authors) = item {
-            Some(*authors)
-        } else {
-            None
-        }
-    });
+    let title = entry.title;
+    let authors = entry.authors;
 
     let cite_display_text = analysis.cite_display_text.get(entry.tag).unwrap();
 

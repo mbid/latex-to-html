@@ -231,5 +231,9 @@ pub enum BibEntryItem<'a> {
 pub struct BibEntry<'a> {
     pub entry_type: BibEntryType,
     pub tag: &'a str,
-    pub items: Vec<BibEntryItem<'a>>,
+
+    pub title: Option<&'a str>,
+    pub year: Option<&'a str>,
+    pub authors: Option<&'a str>,
+    pub url: Option<&'a str>,
 }

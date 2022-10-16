@@ -153,21 +153,10 @@ fn bib_entries<'a>(
         .iter()
         .filter(|entry| node_lists.cite_ids.contains(entry.tag))
         .collect();
-    result.sort_unstable_by(|lhs, rhs| {
-        let lhs_authors = lhs.items.iter().find_map(|item| match item {
-            BibEntryItem::Authors(authors) => Some(authors),
-            _ => None,
-        });
-        let rhs_authors = rhs.items.iter().find_map(|item| match item {
-            BibEntryItem::Authors(authors) => Some(authors),
-            _ => None,
-        });
-
-        match (lhs_authors, rhs_authors) {
-            (None, _) => Ordering::Less,
-            (_, None) => Ordering::Greater,
-            (Some(lhs_authors), Some(rhs_authors)) => lhs_authors.cmp(rhs_authors),
-        }
+    result.sort_unstable_by(|lhs, rhs| match (lhs.authors, rhs.authors) {
+        (None, _) => Ordering::Less,
+        (_, None) => Ordering::Greater,
+        (Some(lhs_authors), Some(rhs_authors)) => lhs_authors.cmp(rhs_authors),
     });
     result
 }

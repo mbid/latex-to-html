@@ -673,6 +673,11 @@ pub fn bib_entry_type<'a>(i: &'a str) -> Result<'a, BibEntryType> {
     ))(i)
 }
 
+fn bib_entry_tag<'a>(i: &'a str) -> Result<'a, &'a str> {
+    let (i, val) = take_while(|c| " \t\n,".find(c).is_none())(i)?;
+    Ok((i, val))
+}
+
 fn bib_entry_item<'a, 'b, O>(
     name: &'a str,
     mut value_parser: impl FnMut(&'a str) -> Result<'a, O>,
@@ -691,29 +696,83 @@ fn bib_entry_item<'a, 'b, O>(
     }
 }
 
-fn bib_entry_tag<'a>(i: &'a str) -> Result<'a, &'a str> {
-    let (i, val) = take_while(|c| " \t\n,".find(c).is_none())(i)?;
-    Ok((i, val))
+fn bib_item_raw_value<'a>(i: &'a str) -> Result<'a, &'a str> {
+    let (i, value) = take_while(|c| c != '{' && c != '}')(i)?;
+    Ok((i, value.trim_end()))
 }
 
-fn bib_title_value<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
-    let (i, val) = take_while(|c| c != '{' && c != '}')(i)?;
-    Ok((i, BibEntryItem::Title(val.trim_end())))
+fn bib_title_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
+    let (i, val) = bib_entry_item("title", bib_item_raw_value)(i)?;
+    Ok((i, BibEntryItem::Title(val)))
 }
 
-fn bib_year_value<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
-    let (i, val) = take_while(|c| c != '{' && c != '}')(i)?;
-    Ok((i, BibEntryItem::Year(val.trim_end())))
+fn bib_year_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
+    let (i, val) = bib_entry_item("year", bib_item_raw_value)(i)?;
+    Ok((i, BibEntryItem::Year(val)))
 }
 
-fn bib_authors_value<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
-    let (i, val) = take_while(|c| c != '{' && c != '}')(i)?;
-    Ok((i, BibEntryItem::Authors(val.trim_end())))
+fn bib_author_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
+    let (i, val) = bib_entry_item("author", bib_item_raw_value)(i)?;
+    Ok((i, BibEntryItem::Authors(val)))
 }
 
-fn bib_url_value<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
-    let (i, val) = take_while(|c| c != '{' && c != '}')(i)?;
-    Ok((i, BibEntryItem::Url(val.trim_end())))
+fn bib_authors_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
+    let (i, val) = bib_entry_item("authors", bib_item_raw_value)(i)?;
+    Ok((i, BibEntryItem::Authors(val)))
+}
+
+fn bib_url_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
+    let (i, val) = bib_entry_item("url", bib_item_raw_value)(i)?;
+    Ok((i, BibEntryItem::Url(val)))
+}
+
+fn bib_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
+    alt((
+        bib_title_item,
+        bib_year_item,
+        bib_author_item,
+        bib_authors_item,
+        bib_url_item,
+    ))(i)
+}
+
+fn make_bib_entry<'a, 'b>(
+    entry_type: BibEntryType,
+    tag: &'a str,
+    items: &'b [BibEntryItem<'a>],
+) -> BibEntry<'a> {
+    let mut result = BibEntry {
+        tag,
+        entry_type,
+        title: None,
+        year: None,
+        authors: None,
+        url: None,
+    };
+
+    for item in items {
+        use BibEntryItem::*;
+        match item {
+            Title(title) => {
+                assert!(result.title.is_none(), "Duplicate title value");
+                result.title = Some(title);
+            }
+            Year(year) => {
+                assert!(result.year.is_none(), "Duplicate year value");
+                result.year = Some(year);
+            }
+            Authors(authors) => {
+                assert!(result.authors.is_none(), "Duplicate authors value");
+                result.authors = Some(authors);
+            }
+            Url(url) => {
+                assert!(result.url.is_none(), "Duplicate url value");
+                result.url = Some(url);
+            }
+        }
+    }
+
+    result
 }
 
 pub fn bib_entry<'a>(i: &'a str) -> Result<'a, BibEntry<'a>> {
@@ -729,27 +788,13 @@ pub fn bib_entry<'a>(i: &'a str) -> Result<'a, BibEntry<'a>> {
     let (i, _) = char(',')(i)?;
     let (i, _) = bib_ws(i)?;
 
-    let title = bib_entry_item("title", bib_title_value);
-    let year = bib_entry_item("year", bib_year_value);
-    let author = bib_entry_item("author", bib_authors_value);
-    let authors = bib_entry_item("authors", bib_authors_value);
-    let url = bib_entry_item("url", bib_url_value);
-
-    let item = alt((title, year, author, authors, url));
     let item_sep = tuple((bib_ws, char(','), bib_ws));
-    let (i, items) = intersperse0(item, item_sep)(i)?;
+    let (i, items) = intersperse0(bib_item, item_sep)(i)?;
 
     let (i, _) = bib_ws(i)?;
     let (i, _) = char('}')(i)?;
 
-    Ok((
-        i,
-        BibEntry {
-            tag,
-            entry_type,
-            items,
-        },
-    ))
+    Ok((i, make_bib_entry(entry_type, tag, items.as_slice())))
 }
 
 #[test]
@@ -764,7 +809,9 @@ fn test_bib_entry() {
     let (i, entry) = bib_entry(src).unwrap();
     assert!(i.is_empty());
     assert_eq!(entry.entry_type, BibEntryType::Book);
-    assert_eq!(entry.items.len(), 3);
+    assert_eq!(entry.title, Some("Model categories"));
+    assert_eq!(entry.authors, Some("Hovey, Mark"));
+    assert_eq!(entry.year, Some("2007"));
 }
 
 pub fn bib<'a>(i: &'a str) -> Result<'a, Vec<BibEntry<'a>>> {
