@@ -220,10 +220,22 @@ pub enum BibEntryType {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FirstName<'a> {
+    Full(&'a str),
+    Abbreviation(&'a str),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BibPerson<'a> {
+    pub first_names: Vec<FirstName<'a>>,
+    pub last_name: &'a str,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BibEntryItem<'a> {
     Title(&'a str),
     Year(&'a str),
-    Authors(&'a str),
+    Authors(Vec<BibPerson<'a>>),
     Url(&'a str),
 }
 
@@ -234,6 +246,6 @@ pub struct BibEntry<'a> {
 
     pub title: Option<&'a str>,
     pub year: Option<&'a str>,
-    pub authors: Option<&'a str>,
+    pub authors: Option<Vec<BibPerson<'a>>>,
     pub url: Option<&'a str>,
 }

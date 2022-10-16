@@ -222,9 +222,28 @@ fn display_title<'a>(title: Option<&'a Paragraph<'a>>) -> impl 'a + Display {
     })
 }
 
+fn display_bib_person<'a>(person: &'a BibPerson<'a>) -> impl 'a + Display {
+    DisplayFn(move |out: &mut Formatter| {
+        for first_name in person.first_names.iter() {
+            use FirstName::*;
+            match first_name {
+                Full(name) => {
+                    write!(out, "{name} ")?;
+                }
+                Abbreviation(abbr) => {
+                    write!(out, "{abbr}. ")?;
+                }
+            }
+        }
+        let last_name = person.last_name;
+        write!(out, "{last_name}")?;
+        Ok(())
+    })
+}
+
 fn display_bib_entry<'a>(analysis: &'a Analysis<'a>, entry: &'a BibEntry<'a>) -> impl 'a + Display {
     let title = entry.title;
-    let authors = entry.authors;
+    let authors = &entry.authors;
 
     let cite_display_text = analysis.cite_display_text.get(entry.tag).unwrap();
 
@@ -234,12 +253,22 @@ fn display_bib_entry<'a>(analysis: &'a Analysis<'a>, entry: &'a BibEntry<'a>) ->
         writedoc! {out, r#"
             <div id="{id_attr_value}" class="bib-entry">
         "#}?;
-        write!(out, "{cite_display_text} ")?;
+        write!(out, "{cite_display_text}")?;
+        match authors.as_deref() {
+            None | Some([]) => (),
+            Some([author]) => {
+                write!(out, " {}.", display_bib_person(author))?;
+            }
+            Some([init @ .., before_last, last]) => {
+                for author in init {
+                    write!(out, " {},", display_bib_person(author))?;
+                }
+                write!(out, " {}", display_bib_person(before_last))?;
+                write!(out, " and {}.", display_bib_person(last))?;
+            }
+        };
         if let Some(title) = title {
-            write!(out, "{title}.")?;
-        }
-        if let Some(authors) = authors {
-            write!(out, "{authors}.")?;
+            write!(out, " {title}.")?;
         }
         writedoc! {out, r#"</div>"#}?;
         Ok(())

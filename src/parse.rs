@@ -711,14 +711,58 @@ fn bib_year_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
     Ok((i, BibEntryItem::Year(val)))
 }
 
-fn bib_author_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
-    let (i, val) = bib_entry_item("author", bib_item_raw_value)(i)?;
-    Ok((i, BibEntryItem::Authors(val)))
+fn bib_abbreviated_first_name<'a>(i: &'a str) -> Result<'a, FirstName<'a>> {
+    let before = i;
+    let (i, _) = none_of(",;={} \t\n")(i)?;
+    let first_name = FirstName::Abbreviation(consumed_slice(before, i));
+    let (i, _) = char('.')(i)?;
+    Ok((i, first_name))
+}
+
+fn bib_full_first_name<'a>(i: &'a str) -> Result<'a, FirstName<'a>> {
+    let before = i;
+    let (i, _) = take_while1(|c| !",;={}. \t\n".contains(c))(i)?;
+    let value = consumed_slice(before, i);
+    if value == "and" {
+        return Err(nom::Err::Error(Error::new(i, nom::error::ErrorKind::IsA)));
+    }
+    let first_name = FirstName::Full(value);
+    Ok((i, first_name))
+}
+
+fn bib_first_name<'a>(i: &'a str) -> Result<'a, FirstName<'a>> {
+    alt((bib_abbreviated_first_name, bib_full_first_name))(i)
+}
+
+fn bib_last_name<'a>(i: &'a str) -> Result<'a, &'a str> {
+    let before = i;
+    let (i, _) = take_while1(|c| !",;={}. \t\n".contains(c))(i)?;
+    let value = consumed_slice(before, i);
+    if value == "and" {
+        return Err(nom::Err::Error(Error::new(i, nom::error::ErrorKind::IsA)));
+    }
+    Ok((i, value))
+}
+
+fn bib_person<'a>(i: &'a str) -> Result<'a, BibPerson> {
+    let (i, last_name) = bib_last_name(i)?;
+    let (i, _) = bib_ws(i)?;
+    let (i, _) = char(',')(i)?;
+    let (i, _) = bib_ws(i)?;
+    let (i, first_names) = intersperse0(bib_first_name, bib_ws)(i)?;
+    Ok((
+        i,
+        BibPerson {
+            first_names,
+            last_name,
+        },
+    ))
 }
 
 fn bib_authors_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
-    let (i, val) = bib_entry_item("authors", bib_item_raw_value)(i)?;
-    Ok((i, BibEntryItem::Authors(val)))
+    let sep = tuple((bib_ws, tag("and"), bib_ws));
+    let (i, authors) = bib_entry_item("authors", intersperse0(bib_person, sep))(i)?;
+    Ok((i, BibEntryItem::Authors(authors)))
 }
 
 fn bib_url_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
@@ -730,7 +774,6 @@ fn bib_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
     alt((
         bib_title_item,
         bib_year_item,
-        bib_author_item,
         bib_authors_item,
         bib_url_item,
     ))(i)
@@ -739,7 +782,7 @@ fn bib_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
 fn make_bib_entry<'a, 'b>(
     entry_type: BibEntryType,
     tag: &'a str,
-    items: &'b [BibEntryItem<'a>],
+    items: Vec<BibEntryItem<'a>>,
 ) -> BibEntry<'a> {
     let mut result = BibEntry {
         tag,
@@ -794,24 +837,7 @@ pub fn bib_entry<'a>(i: &'a str) -> Result<'a, BibEntry<'a>> {
     let (i, _) = bib_ws(i)?;
     let (i, _) = char('}')(i)?;
 
-    Ok((i, make_bib_entry(entry_type, tag, items.as_slice())))
-}
-
-#[test]
-fn test_bib_entry() {
-    let src = indoc::indoc! {"
-        @book{hovey-model-categories,
-          title={Model categories},
-          author={Hovey, Mark},
-          year={2007}
-        }"};
-
-    let (i, entry) = bib_entry(src).unwrap();
-    assert!(i.is_empty());
-    assert_eq!(entry.entry_type, BibEntryType::Book);
-    assert_eq!(entry.title, Some("Model categories"));
-    assert_eq!(entry.authors, Some("Hovey, Mark"));
-    assert_eq!(entry.year, Some("2007"));
+    Ok((i, make_bib_entry(entry_type, tag, items)))
 }
 
 pub fn bib<'a>(i: &'a str) -> Result<'a, Vec<BibEntry<'a>>> {

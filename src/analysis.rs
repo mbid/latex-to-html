@@ -153,11 +153,17 @@ fn bib_entries<'a>(
         .iter()
         .filter(|entry| node_lists.cite_ids.contains(entry.tag))
         .collect();
-    result.sort_unstable_by(|lhs, rhs| match (lhs.authors, rhs.authors) {
-        (None, _) => Ordering::Less,
-        (_, None) => Ordering::Greater,
-        (Some(lhs_authors), Some(rhs_authors)) => lhs_authors.cmp(rhs_authors),
-    });
+    result.sort_unstable_by(
+        |lhs, rhs| match (lhs.authors.as_deref(), rhs.authors.as_deref()) {
+            (None, _) => Ordering::Less,
+            (Some([]), _) => Ordering::Less,
+            (_, None) => Ordering::Greater,
+            (_, Some([])) => Ordering::Greater,
+            (Some([lhs_author, ..]), Some([rhs_author, ..])) => {
+                lhs_author.last_name.cmp(rhs_author.last_name)
+            }
+        },
+    );
     result
 }
 
