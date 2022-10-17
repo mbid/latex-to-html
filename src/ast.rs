@@ -232,11 +232,22 @@ pub struct BibPerson<'a> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BibPages {
+    pub first: u64,
+    pub last: Option<u64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BibEntryItem<'a> {
     Title(&'a str),
     Year(&'a str),
     Authors(Vec<BibPerson<'a>>),
     Url(&'a str),
+    Journal(&'a str),
+    Publisher(&'a str),
+    Volume(&'a str),
+    Number(&'a str),
+    Pages(BibPages),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -248,4 +259,9 @@ pub struct BibEntry<'a> {
     pub year: Option<&'a str>,
     pub authors: Option<Vec<BibPerson<'a>>>,
     pub url: Option<&'a str>,
+    pub journal: Option<&'a str>,
+    pub publisher: Option<&'a str>,
+    pub volume: Option<&'a str>,
+    pub number: Option<&'a str>,
+    pub pages: Option<BibPages>,
 }

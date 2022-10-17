@@ -269,6 +269,48 @@ fn display_bib_entry<'a>(analysis: &'a Analysis<'a>, entry: &'a BibEntry<'a>) ->
         if let Some(title) = title {
             write!(out, " {title}.")?;
         }
+        if let Some(journal) = entry.journal {
+            write!(out, " {journal}.")?;
+        }
+
+        let has_volume_or_number = match (entry.volume, entry.number) {
+            (Some(volume), Some(number)) => {
+                write!(out, " {volume}({number})")?;
+                true
+            }
+            (Some(volume), None) => {
+                write!(out, " {volume}")?;
+                true
+            }
+            (None, Some(number)) => {
+                write!(out, " ({number})")?;
+                true
+            }
+            (None, None) => false,
+        };
+
+        if let Some(BibPages { first, last }) = entry.pages {
+            if has_volume_or_number {
+                write!(out, ":")?;
+            } else {
+                if last.is_some() {
+                    write!(out, " pages ")?;
+                } else {
+                    write!(out, " page ")?;
+                }
+            }
+            write!(out, "{first}")?;
+            if let Some(last) = last {
+                write!(out, "–{last}")?;
+            }
+        }
+
+        if let Some(year) = entry.year {
+            write!(out, ", {year}.")?;
+        } else {
+            write!(out, ".")?;
+        }
+
         writedoc! {out, r#"</li>"#}?;
         Ok(())
     })

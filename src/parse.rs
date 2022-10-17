@@ -1,11 +1,12 @@
 use crate::ast::*;
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take_while, take_while1};
-use nom::character::complete::{char, none_of, one_of};
+use nom::character::complete::{char, digit1, none_of, one_of};
 use nom::combinator::{cut, opt};
 use nom::multi::{many0, many1};
 use nom::sequence::{pair, tuple};
 use nom::{IResult, Parser};
+use std::str::FromStr;
 
 type Error<'a> = nom::error::Error<&'a str>;
 
@@ -770,12 +771,51 @@ fn bib_url_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
     Ok((i, BibEntryItem::Url(val)))
 }
 
+fn bib_journal_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
+    let (i, val) = bib_entry_item("journal", bib_item_raw_value)(i)?;
+    Ok((i, BibEntryItem::Journal(val)))
+}
+
+fn bib_publisher_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
+    let (i, val) = bib_entry_item("publisher", bib_item_raw_value)(i)?;
+    Ok((i, BibEntryItem::Publisher(val)))
+}
+
+fn bib_volume_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
+    let (i, val) = bib_entry_item("volume", bib_item_raw_value)(i)?;
+    Ok((i, BibEntryItem::Volume(val)))
+}
+
+fn bib_number_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
+    let (i, val) = bib_entry_item("number", bib_item_raw_value)(i)?;
+    Ok((i, BibEntryItem::Number(val)))
+}
+
+fn bib_pages_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
+    bib_entry_item("pages", |i| {
+        let (i, first) = digit1(i)?;
+        let first = u64::from_str(first).unwrap();
+        let (i, last) = opt(|i| {
+            let (i, _) = alt((tag("--"), tag("–"), tag("-")))(i)?;
+            let (i, last) = digit1(i)?;
+            let last = u64::from_str(last).unwrap();
+            Ok((i, last))
+        })(i)?;
+        Ok((i, BibEntryItem::Pages(BibPages { first, last })))
+    })(i)
+}
+
 fn bib_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
     alt((
         bib_title_item,
         bib_year_item,
         bib_authors_item,
         bib_url_item,
+        bib_journal_item,
+        bib_publisher_item,
+        bib_volume_item,
+        bib_number_item,
+        bib_pages_item,
     ))(i)
 }
 
@@ -791,6 +831,11 @@ fn make_bib_entry<'a, 'b>(
         year: None,
         authors: None,
         url: None,
+        journal: None,
+        publisher: None,
+        volume: None,
+        number: None,
+        pages: None,
     };
 
     for item in items {
@@ -811,6 +856,26 @@ fn make_bib_entry<'a, 'b>(
             Url(url) => {
                 assert!(result.url.is_none(), "Duplicate url value");
                 result.url = Some(url);
+            }
+            Journal(journal) => {
+                assert!(result.journal.is_none(), "Duplicate journal value");
+                result.journal = Some(journal);
+            }
+            Publisher(publisher) => {
+                assert!(result.publisher.is_none(), "Duplicate publisher value");
+                result.publisher = Some(publisher);
+            }
+            Volume(volume) => {
+                assert!(result.volume.is_none(), "Duplicate volume value");
+                result.volume = Some(volume);
+            }
+            Number(number) => {
+                assert!(result.number.is_none(), "Duplicate number value");
+                result.number = Some(number);
+            }
+            Pages(pages) => {
+                assert!(result.pages.is_none(), "Duplicate pages value");
+                result.pages = Some(pages);
             }
         }
     }
