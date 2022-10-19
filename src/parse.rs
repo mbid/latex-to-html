@@ -789,6 +789,16 @@ fn bib_journal_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
     Ok((i, BibEntryItem::Journal(val)))
 }
 
+fn bib_booktitle_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
+    let (i, val) = bib_entry_item(tag("booktitle"), bib_item_raw_value)(i)?;
+    Ok((i, BibEntryItem::Booktitle(val)))
+}
+
+fn bib_series_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
+    let (i, val) = bib_entry_item(tag("series"), bib_item_raw_value)(i)?;
+    Ok((i, BibEntryItem::Series(val)))
+}
+
 fn bib_publisher_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
     let (i, val) = bib_entry_item(tag("publisher"), bib_item_raw_value)(i)?;
     Ok((i, BibEntryItem::Publisher(val)))
@@ -831,6 +841,8 @@ fn bib_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
         bib_authors_item,
         bib_url_item,
         bib_journal_item,
+        bib_booktitle_item,
+        bib_series_item,
         bib_publisher_item,
         bib_volume_item,
         bib_number_item,
@@ -852,6 +864,8 @@ fn make_bib_entry<'a, 'b>(
         authors: None,
         url: None,
         journal: None,
+        booktitle: None,
+        series: None,
         publisher: None,
         volume: None,
         number: None,
@@ -880,6 +894,14 @@ fn make_bib_entry<'a, 'b>(
             Journal(journal) => {
                 assert!(result.journal.is_none(), "Duplicate journal value");
                 result.journal = Some(journal);
+            }
+            Booktitle(booktitle) => {
+                assert!(result.booktitle.is_none(), "Duplicate booktitle value");
+                result.booktitle = Some(booktitle);
+            }
+            Series(series) => {
+                assert!(result.series.is_none(), "Duplicate series value");
+                result.series = Some(series);
             }
             Publisher(publisher) => {
                 assert!(result.publisher.is_none(), "Duplicate publisher value");

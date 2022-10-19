@@ -297,21 +297,29 @@ fn display_bib_entry<'a>(entry: &'a BibEntry<'a>) -> impl 'a + Display {
         if let Some(title) = title {
             write!(out, " {title}.")?;
         }
+
+        // TODO: Only on of journal, booktitle or series should be present.
         if let Some(journal) = entry.journal {
-            write!(out, " {journal}.")?;
+            write!(out, " {journal}")?;
+        }
+        if let Some(booktitle) = entry.booktitle {
+            write!(out, " {booktitle}")?;
+        }
+        if let Some(series) = entry.series {
+            write!(out, " {series}")?;
         }
 
         let has_volume_or_number = match (entry.volume, entry.number) {
             (Some(volume), Some(number)) => {
-                write!(out, " {volume}({number})")?;
+                write!(out, ", {volume}({number})")?;
                 true
             }
             (Some(volume), None) => {
-                write!(out, " {volume}")?;
+                write!(out, ", {volume}")?;
                 true
             }
             (None, Some(number)) => {
-                write!(out, " ({number})")?;
+                write!(out, ", ({number})")?;
                 true
             }
             (None, None) => false,
@@ -322,9 +330,9 @@ fn display_bib_entry<'a>(entry: &'a BibEntry<'a>) -> impl 'a + Display {
                 write!(out, ":")?;
             } else {
                 if last.is_some() {
-                    write!(out, " pages ")?;
+                    write!(out, ", pages ")?;
                 } else {
-                    write!(out, " page ")?;
+                    write!(out, ", page ")?;
                 }
             }
             write!(out, "{first}")?;
@@ -341,7 +349,11 @@ fn display_bib_entry<'a>(entry: &'a BibEntry<'a>) -> impl 'a + Display {
                 write!(out, ".")?;
             }
             (false, Some(year)) => {
-                write!(out, " {year}.")?;
+                if entry.journal.is_some() || entry.booktitle.is_some() || entry.series.is_some() {
+                    write!(out, ", {year}.")?;
+                } else {
+                    write!(out, " {year}.")?;
+                }
             }
             (false, None) => (),
         };
