@@ -249,9 +249,8 @@ pub fn emit_math_svg_files<'a, 'b>(
     preamble: &str,
     math: impl Iterator<Item = &'b Math<'b>>,
 ) {
-    fs::create_dir_all(out_dir).unwrap();
-
     let out_dir = out_dir.join(SVG_OUT_DIR);
+    fs::create_dir_all(&out_dir).unwrap();
 
     let offsets_path = out_dir.join("offsets.css");
     let mut offsets_file = OpenOptions::new()
