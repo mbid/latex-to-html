@@ -241,11 +241,9 @@ fn display_bib_person<'a>(person: &'a BibPerson<'a>) -> impl 'a + Display {
     })
 }
 
-fn display_bib_entry<'a>(analysis: &'a Analysis<'a>, entry: &'a BibEntry<'a>) -> impl 'a + Display {
+fn display_bib_entry<'a>(entry: &'a BibEntry<'a>) -> impl 'a + Display {
     let title = entry.title;
     let authors = &entry.authors;
-
-    let cite_display_text = analysis.cite_display_text.get(entry.tag).unwrap();
 
     let id_attr_value = display_cite_value(entry.tag);
 
@@ -454,7 +452,7 @@ fn write_index(out: &mut impl Write, doc: &Document, analysis: &Analysis) -> Res
                     <ol class="bibliography">
                 "#}?;
                 for entry in analysis.bib_entries.iter().copied() {
-                    let entry = display_bib_entry(analysis, entry);
+                    let entry = display_bib_entry(entry);
                     writedoc! {out, r#"
                         {entry}
                     "#}?;
