@@ -130,11 +130,11 @@ pub fn command_with_opts<'a, Opts, Args>(
 
         let (i, opts) = opt(tuple((
             char('['),
-            inline_ws,
+            any_ws,
             &mut opt_parser,
-            inline_ws,
+            any_ws,
             char(']'),
-            inline_ws,
+            any_ws,
         )))
         .parse(i)?;
         let opts = opts.map(|opts| opts.2);
@@ -286,7 +286,8 @@ pub fn no_arg_command<'a>(name: &'static str) -> impl FnMut(&'a str) -> Result<(
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct TextToken<'a>(&'a str);
 
-const SPECIAL_CHARS: &'static str = " \n\t#$%&{}_~^\\";
+// TODO: [] is special only in certain contexts, e.g. when parsing the options of a command.
+const SPECIAL_CHARS: &'static str = " \n\t#$%&{}[]_~^\\";
 
 pub fn text_token(i: &str) -> Result<TextToken> {
     let before = i;
@@ -365,8 +366,11 @@ pub fn eqref(i: &str) -> Result<ParagraphPart> {
 }
 
 pub fn cite(i: &str) -> Result<ParagraphPart> {
-    let (i, val) = command("cite", cite_value)(i)?;
-    Ok((i, ParagraphPart::Cite(val)))
+    let arg_sep = tuple((any_ws, tag(","), any_ws));
+    let arg_parser = intersperse0(cite_value, arg_sep);
+    let opt_parser = paragraph;
+    let (i, (text, ids)) = command_with_opts("cite", opt_parser, arg_parser)(i)?;
+    Ok((i, ParagraphPart::Cite { text, ids }))
 }
 
 pub fn item(i: &str) -> Result<Item> {

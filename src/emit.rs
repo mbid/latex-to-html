@@ -87,13 +87,16 @@ fn display_paragraph_part<'a>(
                 let value = display_label_value(value);
                 write!(out, "<a href=\"#{value}\">{name}</a>")?;
             }
-            Cite(value) => {
-                let display_text = match analysis.cite_display_text.get(value) {
-                    None => "???",
-                    Some(name) => name.as_str(),
-                };
-                let value = display_cite_value(value);
-                write!(out, "<a href=\"#{value}\">{display_text}</a>")?;
+            Cite { ids, .. } => {
+                // TODO: Should also emit the text here.
+                for id in ids {
+                    let display_text = match analysis.cite_display_text.get(id) {
+                        None => "???",
+                        Some(name) => name.as_str(),
+                    };
+                    let id = display_cite_value(id);
+                    write!(out, "<a href=\"#{id}\">{display_text}</a>")?;
+                }
             }
             Emph(child_paragraph) => {
                 write!(out, "<emph>")?;
@@ -210,8 +213,14 @@ fn display_title<'a>(title: Option<&'a Paragraph<'a>>) -> impl 'a + Display {
                                 write!(out, " ")?;
                             }
                         }
-                        Math(_) | Ref(_) | Emph(_) | Qed | Enumerate(_) | Itemize(_) | Todo
-                        | Cite(_) => {
+                        Math(_)
+                        | Ref(_)
+                        | Emph(_)
+                        | Qed
+                        | Enumerate(_)
+                        | Itemize(_)
+                        | Todo
+                        | Cite { .. } => {
                             panic!("Invalid node in title");
                         }
                     }

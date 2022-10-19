@@ -35,7 +35,10 @@ pub enum ParagraphPart<'a> {
     TextToken(&'a str),
     Math(Math<'a>),
     Ref(&'a str),
-    Cite(&'a str),
+    Cite {
+        ids: Vec<&'a str>,
+        text: Option<Paragraph<'a>>,
+    },
     Emph(Paragraph<'a>),
     Qed,
     Enumerate(Vec<Item<'a>>),
@@ -183,8 +186,13 @@ impl<'a> NodeLists<'a> {
         use ParagraphPart::*;
         match part {
             InlineWhitespace(_) | TextToken(_) | Qed | Todo => (),
-            Cite(id) => {
-                self.cite_ids.insert(id);
+            Cite { ids, text } => {
+                for id in ids.iter().copied() {
+                    self.cite_ids.insert(id);
+                }
+                text.iter()
+                    .flatten()
+                    .for_each(|part| self.add_par_part(part));
             }
             Ref(id) => {
                 self.ref_ids.insert(id);
