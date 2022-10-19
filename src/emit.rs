@@ -303,11 +303,18 @@ fn display_bib_entry<'a>(entry: &'a BibEntry<'a>) -> impl 'a + Display {
             }
         }
 
-        if let Some(year) = entry.year {
-            write!(out, ", {year}.")?;
-        } else {
-            write!(out, ".")?;
-        }
+        match (has_volume_or_number || entry.pages.is_some(), entry.year) {
+            (true, Some(year)) => {
+                write!(out, ", {year}.")?;
+            }
+            (true, None) => {
+                write!(out, ".")?;
+            }
+            (false, Some(year)) => {
+                write!(out, " {year}.")?;
+            }
+            (false, None) => (),
+        };
 
         writedoc! {out, r#"</li>"#}?;
         Ok(())
