@@ -355,6 +355,11 @@ pub fn emph(i: &str) -> Result<Emph> {
     Ok((i, Emph(par)))
 }
 
+pub fn textbf(i: &str) -> Result<ParagraphPart> {
+    let (i, par) = command("textbf", paragraph)(i)?;
+    Ok((i, ParagraphPart::Textbf(par)))
+}
+
 pub fn paragraph_qed(i: &str) -> Result<ParagraphPart> {
     let (i, _) = command_no_args("qed")(i)?;
     Ok((i, ParagraphPart::Qed))
@@ -407,6 +412,11 @@ pub fn todo(i: &str) -> Result<ParagraphPart> {
     Ok((i, ParagraphPart::Todo))
 }
 
+pub fn footnote(i: &str) -> Result<ParagraphPart> {
+    let (i, content) = command("footnote", intersperse0(paragraph, any_ws))(i)?;
+    Ok((i, ParagraphPart::Footnote(content)))
+}
+
 pub fn paragraph<'a>(i: &'a str) -> Result<Paragraph<'a>> {
     let ws_part = |i: &'a str| {
         let (i, ws) = inline_ws(i)?;
@@ -435,10 +445,12 @@ pub fn paragraph<'a>(i: &'a str) -> Result<Paragraph<'a>> {
             eqref,
             cite,
             emph,
+            textbf,
             paragraph_qed,
             itemize,
             enumerate,
             todo,
+            footnote,
         ))(i)
     };
 
@@ -556,13 +568,19 @@ pub fn theorem_like<'a, 'b>(
     };
 
     let head_content_parser = |i: &'a str| {
+        let (i, note_tuple) = opt(tuple((char('['), any_ws, paragraph, any_ws, char(']'))))(i)?;
+        let note = note_tuple.map(|t| t.2);
+        let (i, _) = inline_ws(i)?;
+
         let (i, label) = opt(command("label", label_value))(i)?;
         let (i, _) = inline_ws(i)?;
+
         let (i, content) = paragraphs0(i)?;
         Ok((
             i,
             DocumentPart::TheoremLike {
                 tag: first.tag,
+                note,
                 label,
                 content,
             },

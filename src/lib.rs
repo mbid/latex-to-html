@@ -35,7 +35,7 @@ fn example() {
     let node_lists = NodeLists::new(&doc);
     let analysis = Analysis::new(&doc, &bib_entries, &node_lists);
 
-    let out_path = std::path::Path::new("out");
+    let out_path = std::path::Path::new("out/example");
     emit(&out_path, &doc, &analysis);
     emit_math_svg_files(&out_path, &doc.preamble, node_lists.math.iter().copied());
 }
@@ -62,7 +62,7 @@ fn lcc_model_example() {
     let node_lists = NodeLists::new(&doc);
     let analysis = Analysis::new(&doc, &bib_entries, &node_lists);
 
-    let out_path = std::path::Path::new("out");
+    let out_path = std::path::Path::new("out/lcc-model");
     emit(&out_path, &doc, &analysis);
     emit_math_svg_files(&out_path, &doc.preamble, node_lists.math.iter().copied());
 }

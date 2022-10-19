@@ -40,10 +40,12 @@ pub enum ParagraphPart<'a> {
         text: Option<Paragraph<'a>>,
     },
     Emph(Paragraph<'a>),
+    Textbf(Paragraph<'a>),
     Qed,
     Enumerate(Vec<Item<'a>>),
     Itemize(Vec<Item<'a>>),
     Todo,
+    Footnote(Vec<Paragraph<'a>>),
 }
 
 pub type Paragraph<'a> = Vec<ParagraphPart<'a>>;
@@ -72,6 +74,7 @@ pub enum DocumentPart<'a> {
     Abstract(Vec<Paragraph<'a>>),
     TheoremLike {
         tag: &'a str,
+        note: Option<Paragraph<'a>>,
         content: Vec<Paragraph<'a>>,
         label: Option<&'a str>,
     },
@@ -168,13 +171,21 @@ impl<'a> NodeLists<'a> {
             } => {
                 par.iter().for_each(|part| self.add_par_part(part));
             }
-            Abstract(pars)
-            | TheoremLike {
-                content: pars,
+            TheoremLike {
+                content,
+                note,
                 tag: _,
                 label: _,
+            } => {
+                content
+                    .iter()
+                    .flatten()
+                    .for_each(|part| self.add_par_part(part));
+                note.iter()
+                    .flatten()
+                    .for_each(|part| self.add_par_part(part));
             }
-            | Proof(pars) => {
+            Abstract(pars) | Proof(pars) => {
                 pars.iter()
                     .flatten()
                     .for_each(|part| self.add_par_part(part));
@@ -200,7 +211,7 @@ impl<'a> NodeLists<'a> {
             Math(math) => {
                 self.math.push(math);
             }
-            Emph(par) => {
+            Emph(par) | Textbf(par) => {
                 par.iter().for_each(|part| self.add_par_part(part));
             }
             Enumerate(items) | Itemize(items) => {
@@ -213,6 +224,11 @@ impl<'a> NodeLists<'a> {
                     .for_each(|part| {
                         self.add_par_part(part);
                     });
+            }
+            Footnote(pars) => {
+                pars.iter()
+                    .flatten()
+                    .for_each(|part| self.add_par_part(part));
             }
         }
     }

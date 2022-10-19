@@ -105,6 +105,13 @@ fn display_paragraph_part<'a>(
                 }
                 write!(out, "</emph>")?;
             }
+            Textbf(paragraph) => {
+                write!(out, "<strong>")?;
+                for part in paragraph.iter() {
+                    write!(out, "{}", display_paragraph_part(analysis, part))?;
+                }
+                write!(out, "</strong>")?;
+            }
             Qed => {}
             Itemize(items) => {
                 write!(out, "<ul>\n")?;
@@ -131,6 +138,9 @@ fn display_paragraph_part<'a>(
                 write!(out, "</ol>\n")?;
             }
             Todo => (),
+            Footnote(_) => {
+                // TODO
+            }
         }
         Ok(())
     })
@@ -180,6 +190,7 @@ fn display_cite_value(label_value: &str) -> impl '_ + Display {
 fn display_theorem_header<'a>(
     analysis: &'a Analysis,
     name: &'a Paragraph<'a>,
+    note: Option<&'a Paragraph<'a>>,
     number: Option<&'a str>,
 ) -> impl 'a + Display {
     DisplayFn(move |out: &mut Formatter| {
@@ -189,6 +200,14 @@ fn display_theorem_header<'a>(
         }
         if let Some(number) = number {
             write!(out, " {number}")?;
+        }
+        if let Some(note) = note {
+            // TODO: Should add style so that this span is not bold.
+            write!(out, r#" <span class="theorem-note">("#)?;
+            for part in note.iter() {
+                write!(out, "{}", display_paragraph_part(analysis, part))?;
+            }
+            write!(out, ")</span>")?;
         }
         write!(out, ".\n")?;
 
@@ -216,11 +235,13 @@ fn display_title<'a>(title: Option<&'a Paragraph<'a>>) -> impl 'a + Display {
                         Math(_)
                         | Ref(_)
                         | Emph(_)
+                        | Textbf(_)
                         | Qed
                         | Enumerate(_)
                         | Itemize(_)
                         | Todo
-                        | Cite { .. } => {
+                        | Cite { .. }
+                        | Footnote(_) => {
                             panic!("Invalid node in title");
                         }
                     }
@@ -404,6 +425,7 @@ fn write_index(out: &mut impl Write, doc: &Document, analysis: &Analysis) -> Res
             }
             TheoremLike {
                 tag,
+                note,
                 content,
                 label,
             } => {
@@ -417,7 +439,12 @@ fn write_index(out: &mut impl Write, doc: &Document, analysis: &Analysis) -> Res
                     .doc_part_numbering
                     .get(&std::ptr::addr_of!(*part))
                     .map(|s| s.as_str());
-                let header = display_theorem_header(analysis, &theorem_like_config.name, number);
+                let header = display_theorem_header(
+                    analysis,
+                    &theorem_like_config.name,
+                    note.as_ref(),
+                    number,
+                );
                 writedoc! {out, r#"
                     <div{label} class="theorem-like">
                     <div class="paragraph">
