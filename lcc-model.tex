@@ -56,7 +56,7 @@
 
 \section{Introduction}
 
-Locally cartesian closed (lcc) categories are natural categorical models of extensional dependent type theory \cite{lcc-categories-and-type-theory}:
+Locally cartesian closed (lcc) categories are natural categorical models of extensional dependent type theory \citep{lcc-categories-and-type-theory}:
 Given an lcc category $\mathcal{C}$, one interprets
 \begin{itemize}
   \item
@@ -86,7 +86,7 @@ Here functoriality of substitution means that if one has a sequence $\mathcal{E}
 For pullback functors, however, we are only guaranteed a natural isomorphism $f^* \circ g^* \cong (g \circ f)^*$.
 Similarly, in type theory we have $(\mathbf{\Pi}_\sigma \, \tau)[f] = \mathbf{\Pi}_{\sigma[f]} \, \tau[f^+]$ (where $f^+$ denotes the weakening of $f$ along $\sigma$), whereas for pullback functors there merely exist isomorphisms $f^*(\Pi_\sigma(\tau)) \cong \Pi_{f^*(\sigma)} \, (f^+)^*(\tau)$.
 
-In response to these problems, several notions of models with strict pullback operations were introduced, e.g. categories with families (cwfs) \cite{internal-type-theory}, and coherence techniques were developed to ``strictify'' weak models such as lcc categories to obtain models with well-behaved substitution \cite{substitution-up-to-isomorphism,on-the-interpretation-of-type-theory-in-lcc-categories,the-local-universes-model}.
+In response to these problems, several notions of models with strict pullback operations were introduced, e.g. categories with families (cwfs) \citep{internal-type-theory}, and coherence techniques were developed to ``strictify'' weak models such as lcc categories to obtain models with well-behaved substitution \citep{substitution-up-to-isomorphism,on-the-interpretation-of-type-theory-in-lcc-categories,the-local-universes-model}.
 Thus to interpret dependent type theory in some lcc category $\mathcal{C}$, one first constructs an equivalence $\mathcal{C} \simeq \mathcal{C}^s$ such that $\mathcal{C}^s$ can be endowed with the structure of a strict model of type theory (say, cwf structure), and then interprets type theory in $\mathcal{C}^s$.
 
 In this paper we construct cwf structure on the category of all lcc categories instead of cwf structure on some specific lcc category.
@@ -115,8 +115,8 @@ Removing all reference to the base category $\mathcal{C}$, we may now attempt to
 In the original interpretation, substitution in types and terms is defined by the pullback functor $f^* : \mathcal{C}_{/ \Gamma} \rightarrow \mathcal{C}_{/ \Delta}$ along a morphism $f : \Delta \rightarrow \Gamma$.
 In our new interpretation, $f$ is already an lcc functor, which we simply apply to objects and morphisms of lcc categories.
 
-The idea that different contexts should be understood as different categories is by no means novel, and indeed widespread among researchers of geometric logic; see e.g. \cite[section 4.5]{locales-and-toposes-as-spaces}.
-Not surprisingly, some of the ideas in this paper have independently already been explored, in more explicit form, in \cite{au-sketches} for geometric logic.
+The idea that different contexts should be understood as different categories is by no means novel, and indeed widespread among researchers of geometric logic; see e.g. \citet[section 4.5]{locales-and-toposes-as-spaces}.
+Not surprisingly, some of the ideas in this paper have independently already been explored, in more explicit form, in \citet{au-sketches} for geometric logic.
 To my knowledge, however, an interpretation of type theory along those lines, especially one with strict substitution, has never been spelled out explicitly, and the present paper is an attempt at filling this gap.
 
 Like Seely's original interpretation, the naive interpretation in the category of lcc categories outlined above suffers from coherence issues:
@@ -174,22 +174,22 @@ Usually when one considers coherence problems for type theory, the problem lies 
 Our fibration $p$ is already strict, but it does not support substitution stable type constructors.
 Here the main problem is the base category, however:
 The required pullback diagrams exist only in the bicategorical sense.
-Thus the usual constructions \cite{on-the-interpretation-of-type-theory-in-lcc-categories,the-local-universes-model} are not applicable.
+Thus the usual constructions \citep{on-the-interpretation-of-type-theory-in-lcc-categories,the-local-universes-model} are not applicable.
 
 The goal must thus be to find a category that is (bi)equivalent to $\mathrm{Lcc}$ in which we can replace the bipushout squares \eqref{eq:homotopy-pushout-comprehension} by 1-categorical pushouts.
-Our tool of choice to that end will be \emph{model category theory} (see e.g. \cite{hirschhorn}).
+Our tool of choice to that end will be \emph{model category theory} (see e.g. \citet{hirschhorn}).
 Model categories are presentations of higher categories as ordinary 1-categories with additional structure.
 Crucially, model categories allow the computation of higher (co)limits as ordinary 1-categorical (co)limits under suitable hypotheses.
 The underlying 1-category of the model category presenting a higher category is not unique, and some presentations are more suitable for our purposes than others.
 We explore three Quillen equivalent model categories, all of which encode the same higher category of lcc categories, and show that the third one indeed admits the structure of a model of dependent type theory.
 
 Because of its central role in the paper, the reader is thus expected to be familiar with some notions of model category theory.
-We make extensive use of the notion of algebraically (co)fibrant object in a model category \cite{algebraic-models,coalgebraic-models}, but the relevant results are explained where necessary and can be taken as black boxes for the purpose of this paper.
+We make extensive use of the notion of algebraically (co)fibrant object in a model category \citep{algebraic-models,coalgebraic-models}, but the relevant results are explained where necessary and can be taken as black boxes for the purpose of this paper.
 Because of the condition on enrichment in Theorem \ref{th:coalgebraic-model-category}, all model categories considered here are proved to be model $\mathrm{Gpd}$-categories, that is, model categories enriched over the category of groupoids with their canonical model structure.
-See \cite{enriched-model-cats} for background on enriched model category theory, \cite{groupoid-model-cat} for the canonical model category of groupoids, and \cite{homotopy-theoretic-aspects} for the closely related model $\mathrm{Cat}$-categories.
+See \citet{enriched-model-cats} for background on enriched model category theory, \citet{groupoid-model-cat} for the canonical model category of groupoids, and \citet{homotopy-theoretic-aspects} for the closely related model $\mathrm{Cat}$-categories.
 While it is more common to work with the more general simplicially enriched model categories, the fact that the higher category of lcc categories is 2-truncated affords us to work with simpler groupoid enrichments instead.
 
-In Section \ref{sec:lcc-sketches} we construct the model category $\mathrm{Lcc}$ of \emph{lcc sketches}, a left Bousfield localization of an instance of Isaev's model category structure on marked objects \cite{marked-objects}.
+In Section \ref{sec:lcc-sketches} we construct the model category $\mathrm{Lcc}$ of \emph{lcc sketches}, a left Bousfield localization of an instance of Isaev's model category structure on marked objects \citep{marked-objects}.
 Lcc sketches are to lcc categories as finite limit sketches are to finite limit categories.
 Thus lcc sketches are categories with some diagrams marked as supposed to correspond to a universal object of lcc categories, but marked diagrams do not have to actually satisfy the universal property.
 The model category structure is set up such that every lcc sketch generates an lcc category via fibrant replacement, and lcc sketches are equivalent if and only if they generate equivalent lcc categories.
@@ -221,7 +221,7 @@ This work was supported by the Air Force Office and Scientific Research project 
 This section is concerned with the model category $\mathrm{Lcc}$ of lcc sketches.
 $\mathrm{Lcc}$ is constructed as the left Bousfield localization of a model category of lcc-marked objects, an instance of Isaev's model category structure on marked objects.
 
-\begin{definition}[\cite{marked-objects} Definition 2.1]
+\begin{definition}[\citet{marked-objects} Definition 2.1]
   Let $\mathcal{C}$ be a category and let $i : I \rightarrow \mathcal{C}$ be a diagram in $\mathcal{C}$.
   An \emph{($i$-)marked object} is given by an object $X$ in $\mathcal{C}$ and a subfunctor $m_X$ of $\mathrm{Hom}(i(-), X) : I^\mathrm{op} \rightarrow \mathrm{Set}$.
   A map of the form $k : i(K) \rightarrow X$ is \emph{marked} if $k \in m_X(K)$.
@@ -267,7 +267,7 @@ Let $\gamma : \mathcal{M} \rightarrow \operatorname{Ho} \mathcal{M}$ be the quot
 A marking $m_X \subseteq \mathrm{Hom}(i(-), X)$ of some $X \in \operatorname{Ob} \mathcal{M}$ induces a canonical marking $\gamma(m_X) \subseteq \mathrm{Hom}(\gamma(i(-)), \gamma(X))$ on $\gamma(X)$ by taking $\gamma(m_X)$ to be the image of $m_X$ under $\gamma$.
 Thus a morphism $K \rightarrow X$ in $\operatorname{Ho} \mathcal{M}$ is marked if and only if it has a preimage under $\gamma$ which is marked.
 
-\begin{theorem}[\cite{marked-objects} Theorem 3.3]
+\begin{theorem}[\citet{marked-objects} Theorem 3.3]
   \label{th:marked-model-category}
   Let $\mathcal{M}$ be a combinatorial model category and let $i : I \rightarrow \mathcal{M}$ be a diagram in $\mathcal{M}$ such that every object in the image of $i$ is cofibrant.
   Then the following defines the structure of a combinatorial model category on $\mathcal{M}^i$:
@@ -282,9 +282,9 @@ Thus a morphism $K \rightarrow X$ in $\operatorname{Ho} \mathcal{M}$ is marked i
 \end{theorem}
 
 \begin{remark}
-  The description of weak equivalences in Theorem \ref{th:marked-model-category} does not appear as stated in \cite{marked-objects}, but follows easily from results therein.
+  The description of weak equivalences in Theorem \ref{th:marked-model-category} does not appear as stated in \citet{marked-objects}, but follows easily from results therein.
   Let $t : \mathrm{Id} \Rightarrow R : \mathcal{M} \rightarrow \mathcal{M}$ be a fibrant replacement functor.
-  By \cite[lemma 2.5]{marked-objects}, a map $f : (m_X, X) \rightarrow (m_Y, Y)$ is a weak equivalence in $\mathcal{M}^i$ if and only if $f$ is a weak equivalence in $\mathcal{M}$ and for every diagram (of solid arrows)
+  By \citet[lemma 2.5]{marked-objects}, a map $f : (m_X, X) \rightarrow (m_Y, Y)$ is a weak equivalence in $\mathcal{M}^i$ if and only if $f$ is a weak equivalence in $\mathcal{M}$ and for every diagram (of solid arrows)
   \begin{equation}
     \label{eq:isaev-classification-weak-equivalences}
     \begin{tikzcd}
@@ -370,7 +370,7 @@ Thus a morphism $K \rightarrow X$ in $\operatorname{Ho} \mathcal{M}$ is marked i
     \end{tikzcd}
   \end{equation}
   for some object $v$ in $\mathcal{G}$ and marked $k_0$.
-  It follows by \cite[Theorem 4.85]{basic-concepts-of-enriched-category-theory} from the preservation of tensors and powers by $U$ that the 1-categorical adjunctions $(-)^\flat \dashv U$ and $U \dashv (-)^\flat$ extend to $\mathrm{Gpd}$-adjunctions.
+  It follows by \citet[Theorem 4.85]{basic-concepts-of-enriched-category-theory} from the preservation of tensors and powers by $U$ that the 1-categorical adjunctions $(-)^\flat \dashv U$ and $U \dashv (-)^\flat$ extend to $\mathrm{Gpd}$-adjunctions.
 
   It remains to show that the tensoring $\mathrm{Gpd} \times \mathcal{M}^i \rightarrow \mathcal{M}^i$ is a Quillen bifunctor.
   For this we need to prove that if $f : \mathcal{G} \rightarrowtail \mathcal{H}$ is a cofibration of groupoids and $g : X \rightarrowtail Y$ is a cofibration of marked objects, then their pushout-product
@@ -409,7 +409,7 @@ We thus need to define $S$ in such a way that an lcc-marked category is lcc if a
 
 $\mathrm{Cat}$ is a combinatorial and left proper model $\mathrm{Gpd}$-category with mapping groupoids $\mathrm{Cat}(\mathcal{C}, \mathcal{D})$ given by sets of functors and their natural isomorphisms.
 Thus $\mathrm{Cat}^{\mathrm{lcc}}$ has the structure of a combinatorial and left proper model $\mathrm{Gpd}$-category by Lemma \ref{lem:simplicial-marked-objects}.
-It follows that the left Bousfield localization at any (small) set of maps exists by \cite[Theorem 4.1.1]{hirschhorn}.
+It follows that the left Bousfield localization at any (small) set of maps exists by \citet[Theorem 4.1.1]{hirschhorn}.
 
 \begin{definition}
   \label{def:lcc-axioms}
@@ -581,7 +581,7 @@ It follows that the left Bousfield localization at any (small) set of maps exist
   Homotopy function complexes of maps from cofibrant to fibrant objects in a model $\mathrm{Gpd}$-category can be computed as nerves of the groupoid enrichment.
   Thus \ref{itm:lcc-homotopy-category} and \ref{itm:lcc-homotopy-function-complexes} follow from \ref{itm:lcc-fibrant-objects} and Lemma \ref{lem:simplicial-marked-objects}.
 
-  By \cite[Theorem 4.1.1]{hirschhorn}, the fibrant objects of the left Bousfield localization $\mathrm{Lcc} = S^{-1} \mathrm{Cat}^{\mathrm{lcc}}$ at the set $S$ of morphisms from Definition \ref{def:lcc-axioms} are precisely the fibrant lcc-marked categories $\mathcal{C}$ which are $f$-local for all $f \in S$.
+  By \citet[Theorem 4.1.1]{hirschhorn}, the fibrant objects of the left Bousfield localization $\mathrm{Lcc} = S^{-1} \mathrm{Cat}^{\mathrm{lcc}}$ at the set $S$ of morphisms from Definition \ref{def:lcc-axioms} are precisely the fibrant lcc-marked categories $\mathcal{C}$ which are $f$-local for all $f \in S$.
   The verification of the equivalence asserted in \ref{itm:lcc-fibrant-objects} can thus be split up into three parts corresponding to terminal objects, pullback squares and dependent products.
   As the three proofs are very similar, we give only the proof for pullbacks.
   For this we must show that if $\mathcal{C}$ is a $\mathrm{Pb}$-marked category, then marked maps $i(\mathrm{Pb}) \rightarrow \mathcal{C}$ are stable under isomorphisms and $\mathcal{C}$ is $\mathrm{pb}_i$-local for $i = 0, 1, 2$ if and only if the underlying category $U(\mathcal{C})$ has all pullbacks and maps $i(\mathrm{Pb}) \rightarrow U(\mathcal{C})$ are marked if and only if their images are pullbacks.
@@ -623,7 +623,7 @@ Our goal is to rectify the deficiency that lcc functors do not preserve lcc stru
 Indeed, lcc structure on fibrant lcc sketches is induced by a right lifting \emph{property}, so there is no preferred choice of lcc structure on fibrant lcc sketches. 
 We can thus not even state the required preservation up to equality.
 To be able to speak of distinguished choice of lcc structure, we employ the following technical device.
-\begin{definition}[\cite{algebraic-models}]
+\begin{definition}[\citet{algebraic-models}]
   \label{def:algebraically-fibrant-objects}
   Let $\mathcal{M}$ be a combinatorial model category and let $J$ be a set of trivial cofibrations such that objects with the right lifting property against $J$ are fibrant.
   An \emph{algebraically fibrant object} of $\mathcal{M}$ (with respect to $J$) consists of an object $G(X) \in \operatorname{Ob} \mathcal{M}$ equipped with a choice of lifts against all morphisms $j \in J$.
@@ -746,7 +746,7 @@ For strict lcc categories $\Gamma$, however, these functors can be constructed u
   Because these data are defined in terms of canonical lcc structure on $\Gamma$, they are preserved by strict lcc functors.
 \end{proof}
 
-The context morphisms in our categories with families (cwfs) \cite{internal-type-theory} will usually be defined as functors of categories in the opposite directions.
+The context morphisms in our categories with families (cwfs) \citep{internal-type-theory} will usually be defined as functors of categories in the opposite directions.
 Cwfs are categories equipped with contravariant functors to $\mathrm{Fam}$, the category of families of sets.
 To avoid having to dualize twice, we thus introduce the following notion.
 \begin{definition}
@@ -822,16 +822,16 @@ We conclude the section with a justification for why we have not gone astray so 
 The initial claim was that our interpretation of type theory would be valued in the category of lcc categories, but $\mathrm{sLcc}$ is neither 1-categorically nor bicategorically equivalent to the category $\mathrm{Lcc}_f$ of fibrant lcc sketches.
 Indeed, not every non-strict lcc functor of strict lcc categories is isomorphic to a strict lcc functor.
 Nevertheless, $\mathrm{sLcc}$ has model category structure that presents the same higher category of lcc categories by the following theorem:
-\begin{theorem}[\cite{algebraic-models} Proposition 2.4, \cite{equipping-weak-equivalences} Theorem 19]
+\begin{theorem}[\citet{algebraic-models} Proposition 2.4, \citet{equipping-weak-equivalences} Theorem 19]
   \label{th:algebraically-fibrant-model-category}
   Let $\mathcal{M}$ be a combinatorial model category, and let $J$ be a set of trivial cofibrations such that objects with the right lifting property against $J$ are fibrant.
   Then $G : \operatorname{Alg} \mathcal{M} \rightarrow \mathcal{M}$ is monadic with left adjoint $F$, and $\operatorname{Alg} \mathcal{M}$ is a locally presentable category.
   The model structure of $\mathcal{M}$ can be transferred along the adjunction $F \dashv G$ to $\operatorname{Alg} \mathcal{M}$, endowing $\operatorname{Alg} \mathcal{M}$ with the structure of a combinatorial model category.
   $F \dashv G$ is a Quillen equivalence, and the unit $X \rightarrow G(F(X))$ is a trivial cofibration for all $X \in \mathcal{M}$.
 \end{theorem}
-Theorem \ref{th:algebraically-fibrant-model-category} appears in \cite{algebraic-models} with the additional assumption that all cofibrations in $\mathcal{M}$ are monomorphisms.
-This assumption is lifted in \cite{equipping-weak-equivalences}, but there $J$ is a set of generating trivial cofibrations, which is a slightly stronger condition than the one stated in the theorem.
-However, the proof in \cite{equipping-weak-equivalences} works without change in the more general setting.
+Theorem \ref{th:algebraically-fibrant-model-category} appears in \citet{algebraic-models} with the additional assumption that all cofibrations in $\mathcal{M}$ are monomorphisms.
+This assumption is lifted in \citet{equipping-weak-equivalences}, but there $J$ is a set of generating trivial cofibrations, which is a slightly stronger condition than the one stated in the theorem.
+However, the proof in \citet{equipping-weak-equivalences} works without change in the more general setting.
 
 That the model structure of $\operatorname{Alg} \mathcal{M}$ is obtained by transfer from that of $\mathcal{M}$ means that $G$ reflects fibrations and weak equivalences.
 
@@ -870,11 +870,11 @@ That the model structure of $\operatorname{Alg} \mathcal{M}$ is obtained by tran
     \mathrm{Gpd}(\mathcal{I}, (\operatorname{Alg} \mathcal{M})(Y, X)) \cong (\operatorname{Alg} \mathcal{M})(Y, X^\mathcal{I}).
   \end{equation}
 
-  It follows by \cite[theorem 4.85]{basic-concepts-of-enriched-category-theory} and the preservation of powers by $G$ that the 1-categorical adjunction $F \dashv G$ is groupoid enriched.
-  It is proved in \cite{algebraic-models} that $G$, when considered as a functor of ordinary categories, is monadic using Beck's monadicity theorem.
-  The only additional assumption for the enriched version of Beck's theorem \cite[theorem II.2.1]{enriched-kan-extensions} we have to check is that the coequalizer of a $G$-split pair of morphisms as constructed in \cite{algebraic-models} is a colimit also in the enriched sense.
+  It follows by \citet[theorem 4.85]{basic-concepts-of-enriched-category-theory} and the preservation of powers by $G$ that the 1-categorical adjunction $F \dashv G$ is groupoid enriched.
+  It is proved in \citet{algebraic-models} that $G$, when considered as a functor of ordinary categories, is monadic using Beck's monadicity theorem.
+  The only additional assumption for the enriched version of Beck's theorem \citep[theorem II.2.1]{enriched-kan-extensions} we have to check is that the coequalizer of a $G$-split pair of morphisms as constructed in \citet{algebraic-models} is a colimit also in the enriched sense.
   This follows immediately from the fact that $G$ is locally full and faithful.
-  $G$ is $\mathrm{Gpd}$-monadic and accessible, so $\operatorname{Alg} \mathcal{M}$ is $\mathrm{Gpd}$-cocomplete by \cite[theorem 3.8]{two-dimensional-monad-theory}.
+  $G$ is $\mathrm{Gpd}$-monadic and accessible, so $\operatorname{Alg} \mathcal{M}$ is $\mathrm{Gpd}$-cocomplete by \citet[theorem 3.8]{two-dimensional-monad-theory}.
 
   It remains to show that $\operatorname{Alg} \mathcal{M}$ is groupoid enriched also in the model categorical sense.
   For this it suffices to note that $G$ preserves (weighted) limits and that $G$ preserves and reflects fibrations and weak equivalences, so that the map
@@ -885,7 +885,7 @@ That the model structure of $\operatorname{Alg} \mathcal{M}$ is obtained by tran
 \end{proof}
 
 \begin{remark}
-  \cite{homotopy-theoretic-aspects} defines model category structure on $T\text{-Alg}_s$, the category of strict algebras and their strict morphisms for a 2-monad $T$ on a model $\mathrm{Gpd}$-category.
+  \citet{homotopy-theoretic-aspects} defines model category structure on $T\text{-Alg}_s$, the category of strict algebras and their strict morphisms for a 2-monad $T$ on a model $\mathrm{Gpd}$-category.
   If we choose for $T$ the monad on $\mathrm{Cat}$ assigning to every category the free lcc category generated by it, then $T\text{-Alg}_s$ is $\mathrm{Gpd}$-equivalent to $\mathrm{sLcc}$, so it is natural ask whether their model category structures agree.
 
   The model category structure on $T\text{-Alg}_s$ is defined by transfer from $\mathrm{Cat}$, i.e. such that the forgetful functor $T\text{-Alg}_s \rightarrow \mathrm{Cat}$ reflects fibrations and weak equivalences.
@@ -925,7 +925,7 @@ Recall from Proposition \ref{prop:slcc-model} that a context extension $\Gamma.\
 \end{equation}
 Because $F \dashv G$ is a Quillen equivalence, we should thus expect to find weak equivalences relating $\Gamma_{/ \sigma}$ to $\Gamma.\sigma$ if the pushout \eqref{eq:slcc-context-extension-2} is also a \emph{homotopy} pushout.
 
-By \cite[Proposition A.2.4.4]{higher-topos-theory}, this is the case if $\Gamma$, $F(\{t, \sigma\})$ and $F(\{v : t, \sigma\})$ are cofibrant, and the map $F(\{t, \sigma\}) \rightarrow F(\{v : t, \sigma\})$ is a cofibration.
+By \citet[Proposition A.2.4.4]{higher-topos-theory}, this is the case if $\Gamma$, $F(\{t, \sigma\})$ and $F(\{v : t, \sigma\})$ are cofibrant, and the map $F(\{t, \sigma\}) \rightarrow F(\{v : t, \sigma\})$ is a cofibration.
 The cofibrations of $\mathrm{Lcc}$ are the maps which are injective on objects.
 It follows that $\{t, \sigma\}$ and $\{ v : t \rightarrow \sigma\}$ are cofibrant lcc sketches, and that the inclusion of the former into the latter is a cofibration.
 $F$ is a left Quillen functor and hence preserves cofibrations.
@@ -961,7 +961,7 @@ Similarly to how strict lcc categories have associated structure corresponding t
 We thus consider algebraically cofibrant objects, which, dually to algebraically fibrant objects, are defined as coalgebras for a cofibrant replacement comonad.
 As in the case of algebraically fibrant objects, we are justified in doing so because we obtain an equivalent model category:
 
-\begin{theorem}[\cite{coalgebraic-models} Lemmas 1.2 and 1.3, Theorems 1.4 and 2.5]
+\begin{theorem}[\citet{coalgebraic-models} Lemmas 1.2 and 1.3, Theorems 1.4 and 2.5]
   \label{th:coalgebraic-model-category}
   Let $\mathcal{M}$ be a combinatorial and model $\mathrm{Gpd}$-category.
   Then there are arbitrarily large cardinals $\lambda$ such that
@@ -1409,7 +1409,7 @@ In this section we show that the covariant cwf structure on $\operatorname{Coa} 
   Let $\mathcal{C}$ be a covariant cwf with an empty context and context extension.
   If $\mathcal{C}$ supports any of finite product types, extensional equality types, dependent product or dependent sums, then so does $\operatorname{Core} \mathcal{C}$, and they are preserved by the inclusion $\operatorname{Core} \mathcal{C} \hookrightarrow \mathcal{C}$.
 
-  If $\mathcal{C}$ supports unit and dependent sum types, then $\operatorname{Core} \mathcal{C}$ is democratic, i.e. every context is isomorphic to a context obtained from the empty context by a single context extension \cite{biequivalence-lcc-cwf}.
+  If $\mathcal{C}$ supports unit and dependent sum types, then $\operatorname{Core} \mathcal{C}$ is democratic, i.e. every context is isomorphic to a context obtained from the empty context by a single context extension \citep{biequivalence-lcc-cwf}.
   \qed
 \end{lemma}
 
@@ -1440,7 +1440,7 @@ This allows the use of model category theory to construct a presentation of this
 
 While we have only studied an interpretation of a type theory with dependent sum and dependent product, extensional equality and finite product types, it is straightforward to adapt the techniques of this paper to type theories with other type constructors.
 For example, a dependent type theory with a type of natural numbers can be interpreted in the category of lcc categories with objects of natural numbers.
-Alternatively, we can add finite coproduct, quotient and list types but omit dependent products, and obtain an interpretation in the category of arithmetic universes \cite{au-as-list-arithmetic-pretopos,au-sketches}.
+Alternatively, we can add finite coproduct, quotient and list types but omit dependent products, and obtain an interpretation in the category of arithmetic universes \citep{au-as-list-arithmetic-pretopos,au-sketches}.
 
 I would expect there to be a general theorem by which one can obtain a type theory and its interpretation in the category of algebras for every (higher) monad $M$ on $\mathrm{Cat}$ (with the algebras of $M$ perhaps subject to being finitely complete and stable under slicing).
 Such a theorem, however, is beyond the scope of the present paper.
@@ -1449,8 +1449,6 @@ Such a theorem, however, is beyond the scope of the present paper.
 \bibliographystyle{abbrvnat}
 % LATEX_TO_HTML_IGNORE
 \setcitestyle{authoryear,open={(},close={)}}
-% LATEX_TO_HTML_IGNORE
-\bibliographystyle{plain}
 \bibliography{main}
 
 \end{document}

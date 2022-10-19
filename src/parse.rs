@@ -118,14 +118,14 @@ pub fn command<'a, O>(
     }
 }
 
-pub fn command_with_opts<'a, Opts, Args>(
-    name: &'static str,
+pub fn command_with_opts<'a, Name, Opts, Args>(
+    mut name_parser: impl FnMut(&'a str) -> Result<'a, Name>,
     mut opt_parser: impl FnMut(&'a str) -> Result<'a, Opts>,
     mut arg_parser: impl FnMut(&'a str) -> Result<'a, Args>,
 ) -> impl FnMut(&'a str) -> Result<'a, (Option<Opts>, Args)> {
     move |i: &'a str| {
         let (i, _) = char('\\')(i)?;
-        let (i, _) = tag(name)(i)?;
+        let (i, _) = name_parser(i)?;
         let (i, _) = any_ws(i)?;
 
         let (i, opts) = opt(tuple((
@@ -179,21 +179,6 @@ pub fn raw_command_arg(i: &str) -> Result<&str> {
 
 pub fn raw_command<'a>(name: &'static str) -> impl FnMut(&'a str) -> Result<'a, &'a str> {
     move |i: &'a str| command(name, raw_command_arg)(i)
-}
-
-#[test]
-fn test_command() {
-    assert_eq!(command("asdf", tag(""))("\\asdf{}"), Ok(("", "")));
-    assert_eq!(command("asdf", tag(""))("\\asdf {}"), Ok(("", "")));
-    assert_eq!(command("asdf", tag("xyz"))("\\asdf {xyz}"), Ok(("", "xyz")));
-    assert_eq!(
-        command_with_opts("asdf", tag("123"), tag("xyz"))("\\asdf {xyz}"),
-        Ok(("", (None, "xyz")))
-    );
-    assert_eq!(
-        command_with_opts("asdf", tag("123"), tag("xyz"))("\\asdf [123] {xyz}"),
-        Ok(("", (Some("123"), "xyz")))
-    );
 }
 
 pub fn dyn_env<'a, T, O>(
@@ -374,7 +359,8 @@ pub fn cite(i: &str) -> Result<ParagraphPart> {
     let arg_sep = tuple((any_ws, tag(","), any_ws));
     let arg_parser = intersperse0(cite_value, arg_sep);
     let opt_parser = paragraph;
-    let (i, (text, ids)) = command_with_opts("cite", opt_parser, arg_parser)(i)?;
+    let command_name_parser = alt((tag("citep"), tag("citet"), tag("cite")));
+    let (i, (text, ids)) = command_with_opts(command_name_parser, opt_parser, arg_parser)(i)?;
     Ok((i, ParagraphPart::Cite { text, ids }))
 }
 
@@ -631,7 +617,7 @@ pub fn document_part<'a, 'b>(
 
 pub fn documentclass<'a>(i: &'a str) -> Result<()> {
     let (i, _) = command_with_opts(
-        "documentclass",
+        tag("documentclass"),
         many0(none_of("[]{}")),
         many0(none_of("[]{}")),
     )(i)?;
