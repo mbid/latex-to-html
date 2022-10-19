@@ -671,6 +671,7 @@ pub fn bib_entry_type<'a>(i: &'a str) -> Result<'a, BibEntryType> {
         tag("book").map(|_| Book),
         tag("inproceedings").map(|_| Inproceedings),
         tag("thesis").map(|_| Thesis),
+        tag("incollection").map(|_| Incollection),
     ))(i)
 }
 
@@ -679,12 +680,12 @@ fn bib_entry_tag<'a>(i: &'a str) -> Result<'a, &'a str> {
     Ok((i, val))
 }
 
-fn bib_entry_item<'a, 'b, O>(
-    name: &'a str,
+fn bib_entry_item<'a, O, N>(
+    mut name_parser: impl FnMut(&'a str) -> Result<'a, N>,
     mut value_parser: impl FnMut(&'a str) -> Result<'a, O>,
 ) -> impl FnMut(&'a str) -> Result<'a, O> {
     move |i| {
-        let (i, _) = tag(name)(i)?;
+        let (i, _) = name_parser(i)?;
         let (i, _) = bib_ws(i)?;
         let (i, _) = char('=')(i)?;
         let (i, _) = bib_ws(i)?;
@@ -698,17 +699,18 @@ fn bib_entry_item<'a, 'b, O>(
 }
 
 fn bib_item_raw_value<'a>(i: &'a str) -> Result<'a, &'a str> {
-    let (i, value) = take_while(|c| c != '{' && c != '}')(i)?;
+    //let (i, value) = take_while(|c| c != '{' && c != '}')(i)?;
+    let (i, value) = raw_command_arg(i)?;
     Ok((i, value.trim_end()))
 }
 
 fn bib_title_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
-    let (i, val) = bib_entry_item("title", bib_item_raw_value)(i)?;
+    let (i, val) = bib_entry_item(tag("title"), bib_item_raw_value)(i)?;
     Ok((i, BibEntryItem::Title(val)))
 }
 
 fn bib_year_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
-    let (i, val) = bib_entry_item("year", bib_item_raw_value)(i)?;
+    let (i, val) = bib_entry_item(tag("year"), bib_item_raw_value)(i)?;
     Ok((i, BibEntryItem::Year(val)))
 }
 
@@ -762,37 +764,40 @@ fn bib_person<'a>(i: &'a str) -> Result<'a, BibPerson> {
 
 fn bib_authors_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
     let sep = tuple((bib_ws, tag("and"), bib_ws));
-    let (i, authors) = bib_entry_item("authors", intersperse0(bib_person, sep))(i)?;
+    let (i, authors) = bib_entry_item(
+        alt((tag("author"), tag("author"))),
+        intersperse0(bib_person, sep),
+    )(i)?;
     Ok((i, BibEntryItem::Authors(authors)))
 }
 
 fn bib_url_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
-    let (i, val) = bib_entry_item("url", bib_item_raw_value)(i)?;
+    let (i, val) = bib_entry_item(tag("url"), bib_item_raw_value)(i)?;
     Ok((i, BibEntryItem::Url(val)))
 }
 
 fn bib_journal_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
-    let (i, val) = bib_entry_item("journal", bib_item_raw_value)(i)?;
+    let (i, val) = bib_entry_item(tag("journal"), bib_item_raw_value)(i)?;
     Ok((i, BibEntryItem::Journal(val)))
 }
 
 fn bib_publisher_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
-    let (i, val) = bib_entry_item("publisher", bib_item_raw_value)(i)?;
+    let (i, val) = bib_entry_item(tag("publisher"), bib_item_raw_value)(i)?;
     Ok((i, BibEntryItem::Publisher(val)))
 }
 
 fn bib_volume_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
-    let (i, val) = bib_entry_item("volume", bib_item_raw_value)(i)?;
+    let (i, val) = bib_entry_item(tag("volume"), bib_item_raw_value)(i)?;
     Ok((i, BibEntryItem::Volume(val)))
 }
 
 fn bib_number_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
-    let (i, val) = bib_entry_item("number", bib_item_raw_value)(i)?;
+    let (i, val) = bib_entry_item(tag("number"), bib_item_raw_value)(i)?;
     Ok((i, BibEntryItem::Number(val)))
 }
 
 fn bib_pages_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
-    bib_entry_item("pages", |i| {
+    bib_entry_item(tag("pages"), |i| {
         let (i, first) = digit1(i)?;
         let first = u64::from_str(first).unwrap();
         let (i, last) = opt(|i| {
@@ -803,6 +808,12 @@ fn bib_pages_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
         })(i)?;
         Ok((i, BibEntryItem::Pages(BibPages { first, last })))
     })(i)
+}
+
+fn unused_bib_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
+    let name = take_while(|c| !" ={}".contains(c));
+    let (i, _) = bib_entry_item(name, bib_item_raw_value)(i)?;
+    Ok((i, BibEntryItem::Unused))
 }
 
 fn bib_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
@@ -816,6 +827,7 @@ fn bib_item<'a>(i: &'a str) -> Result<'a, BibEntryItem> {
         bib_volume_item,
         bib_number_item,
         bib_pages_item,
+        unused_bib_item,
     ))(i)
 }
 
@@ -877,6 +889,7 @@ fn make_bib_entry<'a, 'b>(
                 assert!(result.pages.is_none(), "Duplicate pages value");
                 result.pages = Some(pages);
             }
+            Unused => (),
         }
     }
 
@@ -900,6 +913,9 @@ pub fn bib_entry<'a>(i: &'a str) -> Result<'a, BibEntry<'a>> {
     let (i, items) = intersperse0(bib_item, item_sep)(i)?;
 
     let (i, _) = bib_ws(i)?;
+
+    let (i, _) = opt(pair(char(','), bib_ws))(i)?;
+
     let (i, _) = char('}')(i)?;
 
     Ok((i, make_bib_entry(entry_type, tag, items)))

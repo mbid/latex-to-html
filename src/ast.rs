@@ -217,6 +217,7 @@ pub enum BibEntryType {
     Book,
     Inproceedings,
     Thesis,
+    Incollection,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -248,6 +249,7 @@ pub enum BibEntryItem<'a> {
     Volume(&'a str),
     Number(&'a str),
     Pages(BibPages),
+    Unused,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
