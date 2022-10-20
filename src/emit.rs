@@ -4,6 +4,7 @@ use crate::math_svg::*;
 use crate::util::*;
 use convert_case::{Case, Casing};
 use indoc::{indoc, writedoc};
+use itertools::Itertools;
 use std::fmt::{Display, Formatter, Result, Write};
 use std::fs;
 use std::io::Write as IoWrite;
@@ -87,16 +88,23 @@ fn display_paragraph_part<'a>(
                 let value = display_label_value(value);
                 write!(out, "<a href=\"#{value}\">{name}</a>")?;
             }
-            Cite { ids, .. } => {
-                // TODO: Should also emit the text here.
-                for id in ids {
+            Cite { ids, text } => {
+                let links = ids.iter().copied().format_with(", ", |id, f| {
                     let display_text = match analysis.cite_display_text.get(id) {
                         None => "???",
                         Some(name) => name.as_str(),
                     };
                     let id = display_cite_value(id);
-                    write!(out, "<a href=\"#{id}\">{display_text}</a>")?;
+                    f(&format_args!("<a href=\"#{id}\">{display_text}</a>"))
+                });
+                write!(out, "[{links}")?;
+                if let Some(text) = text {
+                    write!(out, ", ")?;
+                    for part in text.iter() {
+                        write!(out, "{}", display_paragraph_part(analysis, part))?;
+                    }
                 }
+                write!(out, "]")?;
             }
             Emph(child_paragraph) => {
                 write!(out, "<emph>")?;

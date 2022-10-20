@@ -173,7 +173,7 @@ fn cite_display_text<'a>(
     let mut result = HashMap::new();
     for (i, entry) in bib_entries.enumerate() {
         let i = i + 1;
-        result.insert(entry.tag, format!("[{i}]"));
+        result.insert(entry.tag, format!("{i}"));
     }
     result
 }
