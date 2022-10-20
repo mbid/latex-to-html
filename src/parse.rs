@@ -301,6 +301,25 @@ pub fn display_math(i: &str) -> Result<Math> {
 
     Ok((i, Math::Display { source, label }))
 }
+pub fn display_math_double_dollar(i: &str) -> Result<Math> {
+    let (i, _) = tag("$$")(i)?;
+    let (i, _) = inline_ws(i)?;
+
+    let (i, label) = match opt(command("label", label_value))(i)? {
+        (j, None) => (j, None),
+        (j, Some(label)) => {
+            let (j, _) = inline_ws(j)?;
+            (j, Some(label))
+        }
+    };
+
+    let (i, source) = take_while(|c| c != '$')(i)?;
+    let source = source.trim_end();
+
+    let (i, _) = tag("$$")(i)?;
+
+    Ok((i, Math::Display { source, label }))
+}
 
 pub fn mathpar(i: &str) -> Result<Math> {
     let (i, mut source) = raw_env("mathpar")(i)?;
@@ -343,6 +362,11 @@ pub fn emph(i: &str) -> Result<Emph> {
 pub fn textbf(i: &str) -> Result<ParagraphPart> {
     let (i, par) = command("textbf", paragraph)(i)?;
     Ok((i, ParagraphPart::Textbf(par)))
+}
+
+pub fn textit(i: &str) -> Result<ParagraphPart> {
+    let (i, par) = command("textit", paragraph)(i)?;
+    Ok((i, ParagraphPart::Textit(par)))
 }
 
 pub fn paragraph_qed(i: &str) -> Result<ParagraphPart> {
@@ -424,14 +448,16 @@ pub fn paragraph<'a>(i: &'a str) -> Result<Paragraph<'a>> {
     let non_ws_part = |i: &'a str| {
         alt((
             text,
-            inline_math.map(ParagraphPart::Math),
             display_math.map(ParagraphPart::Math),
+            display_math_double_dollar.map(ParagraphPart::Math),
+            inline_math.map(ParagraphPart::Math),
             mathpar.map(ParagraphPart::Math),
             ref_command,
             eqref,
             cite,
             emph,
             textbf,
+            textit,
             paragraph_qed,
             itemize,
             enumerate,

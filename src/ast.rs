@@ -41,6 +41,7 @@ pub enum ParagraphPart<'a> {
     },
     Emph(Paragraph<'a>),
     Textbf(Paragraph<'a>),
+    Textit(Paragraph<'a>),
     Qed,
     Enumerate(Vec<Item<'a>>),
     Itemize(Vec<Item<'a>>),
@@ -114,6 +115,10 @@ impl Default for DocumentConfig<'static> {
                 TheoremLikeConfig {
                     tag: "corollary",
                     name: vec![ParagraphPart::TextToken("Corollary")],
+                },
+                TheoremLikeConfig {
+                    tag: "example",
+                    name: vec![ParagraphPart::TextToken("Example")],
                 },
             ],
         }
@@ -211,7 +216,7 @@ impl<'a> NodeLists<'a> {
             Math(math) => {
                 self.math.push(math);
             }
-            Emph(par) | Textbf(par) => {
+            Emph(par) | Textbf(par) | Textit(par) => {
                 par.iter().for_each(|part| self.add_par_part(part));
             }
             Enumerate(items) | Itemize(items) => {

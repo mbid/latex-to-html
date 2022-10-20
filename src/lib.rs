@@ -66,3 +66,28 @@ fn lcc_model_example() {
     emit(&out_path, &doc, &analysis);
     emit_math_svg_files(&out_path, &doc.preamble, node_lists.math.iter().copied());
 }
+
+#[test]
+fn stack_project_schemes_example() {
+    use crate::analysis::Analysis;
+    use crate::ast::NodeLists;
+    use crate::emit::emit;
+    use crate::math_svg::emit_math_svg_files;
+    use crate::parse::document;
+
+    // TODO: Parse the bibliography file.
+    let bib_entries = vec![];
+
+    // Parse the latex file.
+    let src = std::fs::read_to_string("schemes.tex").unwrap();
+    let (i, doc) = document(src.as_str()).unwrap();
+    assert!(i.is_empty());
+
+    // Generate lists of nodes and analyze the bib/latex asts.
+    let node_lists = NodeLists::new(&doc);
+    let analysis = Analysis::new(&doc, &bib_entries, &node_lists);
+
+    let out_path = std::path::Path::new("out/stacks-project/schemes");
+    emit(&out_path, &doc, &analysis);
+    emit_math_svg_files(&out_path, &doc.preamble, node_lists.math.iter().copied());
+}

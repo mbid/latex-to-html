@@ -120,6 +120,13 @@ fn display_paragraph_part<'a>(
                 }
                 write!(out, "</strong>")?;
             }
+            Textit(paragraph) => {
+                write!(out, "<i>")?;
+                for part in paragraph.iter() {
+                    write!(out, "{}", display_paragraph_part(analysis, part))?;
+                }
+                write!(out, "</i>")?;
+            }
             Qed => {}
             Itemize(items) => {
                 write!(out, "<ul>\n")?;
@@ -244,6 +251,7 @@ fn display_title<'a>(title: Option<&'a Paragraph<'a>>) -> impl 'a + Display {
                         | Ref(_)
                         | Emph(_)
                         | Textbf(_)
+                        | Textit(_)
                         | Qed
                         | Enumerate(_)
                         | Itemize(_)

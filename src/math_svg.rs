@@ -178,9 +178,11 @@ fn test_inline_math_to_svg() {
 pub struct DisplayMathSvg(pub String);
 
 pub fn display_math_to_svg(preamble: &str, math: &str) -> Result<DisplayMathSvg, LatexToSvgError> {
+    println!("Compiling display math:");
+    println!("{math}");
     let wrapped_math = formatdoc! {r#"
         \begin{{equation}}
-            {math}
+            {math} \nonumber
         \end{{equation}}
     "#};
     let svg = latex_to_svg(preamble, &wrapped_math)?;
