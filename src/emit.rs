@@ -184,6 +184,7 @@ pub fn display_head(title: impl Display) -> impl Display {
         writedoc! {out, r#"
               <head>
               <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1" />
               <title>{title}</title>
               <link rel="stylesheet" type="text/css" href="https://cdn.rawgit.com/dreampulse/computer-modern-web-font/master/fonts.css">
               <link rel="stylesheet" type="text/css" href="style.css">
@@ -543,6 +544,9 @@ fn write_index(out: &mut impl Write, doc: &Document, analysis: &Analysis) -> Res
 }
 
 const STYLE: &'static str = indoc! {r#"
+    html {
+        padding: 0.5em;
+    }
     body {
         font-family: "Computer Modern Serif", serif;
         max-width: 600px;
