@@ -107,11 +107,11 @@ fn display_paragraph_part<'a>(
                 write!(out, "]")?;
             }
             Emph(child_paragraph) => {
-                write!(out, "<emph>")?;
+                write!(out, "<em>")?;
                 for part in child_paragraph.iter() {
                     write!(out, "{}", display_paragraph_part(analysis, part))?;
                 }
-                write!(out, "</emph>")?;
+                write!(out, "</em>")?;
             }
             Textbf(paragraph) => {
                 write!(out, "<strong>")?;
