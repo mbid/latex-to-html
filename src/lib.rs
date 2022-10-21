@@ -82,11 +82,15 @@ pub fn process(tex_path: &Path, bib_path: &Path, out_path: &Path) {
             let location_begin = tex_src.offset(math_source);
             let location = Location(location_begin, location_begin + math_source.len());
             debug_assert_eq!(&&tex_src[location.0..location.1], math_source);
+
             let location_display = SourceDisplay {
                 source: tex_src.as_str(),
                 location,
                 source_path: Some(tex_path),
-                underlined: false,
+                underlined: match math {
+                    Inline(_) => true,
+                    Display { .. } | Mathpar { .. } => false,
+                },
             };
 
             let error_text = match error {
@@ -108,7 +112,7 @@ pub fn process(tex_path: &Path, bib_path: &Path, out_path: &Path) {
 }
 
 #[test]
-fn example() {
+fn eqlog_example() {
     process(
         Path::new("example.tex"),
         Path::new("example.bib"),

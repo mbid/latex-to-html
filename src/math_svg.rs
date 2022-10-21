@@ -10,9 +10,12 @@ use std::process::{self, Command};
 use tempdir::TempDir;
 
 fn write_latex(out: &mut impl io::Write, preamble: &str, latex: &str) -> Result<(), io::Error> {
+    // TODO: Get rid of mathtools here?
     writedoc! {out, r#"
         \documentclass{{minimal}}
         {preamble}
+        \usepackage{{mathtools}}
+        \mathtoolsset{{showonlyrefs}}
         \begin{{document}}
         {latex}
         \end{{document}}
@@ -178,12 +181,7 @@ fn test_inline_math_to_svg() {
 pub struct DisplayMathSvg(pub String);
 
 pub fn display_math_to_svg(preamble: &str, math: &str) -> Result<DisplayMathSvg, LatexToSvgError> {
-    let wrapped_math = formatdoc! {r#"
-        \begin{{equation}}
-            {math} \nonumber
-        \end{{equation}}
-    "#};
-    let svg = latex_to_svg(preamble, &wrapped_math)?;
+    let svg = latex_to_svg(preamble, &math)?;
 
     let bad_svg = || LatexToSvgError::BadSvg;
 
@@ -194,12 +192,7 @@ pub fn display_math_to_svg(preamble: &str, math: &str) -> Result<DisplayMathSvg,
 }
 
 pub fn mathpar_math_to_svg(preamble: &str, math: &str) -> Result<DisplayMathSvg, LatexToSvgError> {
-    let wrapped_math = formatdoc! {r#"
-        \begin{{mathpar}}
-            {math}
-        \end{{mathpar}}
-    "#};
-    let svg = latex_to_svg(preamble, &wrapped_math)?;
+    let svg = latex_to_svg(preamble, math)?;
 
     let bad_svg = || LatexToSvgError::BadSvg;
 

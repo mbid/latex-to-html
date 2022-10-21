@@ -2,6 +2,9 @@ use std::collections::HashSet;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Math<'a> {
+    // Inline holds onto the content, i.e. what's in-between $ and $, but not to $ itself. Display
+    // and Mathpar have the whole environment, i.e. including \begin{equation} and \end{equation}.
+    // TODO: Make this more uniform.
     Inline(&'a str),
     Display {
         source: &'a str,

@@ -275,56 +275,53 @@ pub fn text_token(i: &str) -> Result<TextToken> {
 
 pub fn inline_math(i: &str) -> Result<Math> {
     let (i, _) = char('$')(i)?;
-    let (i, math) = take_while(|c| c != '$')(i)?;
+    let (i, content) = take_while(|c| c != '$')(i)?;
     let (i, _) = char('$')(i)?;
-    Ok((i, Math::Inline(math)))
+    Ok((i, Math::Inline(content)))
 }
 
 pub fn display_math(i: &str) -> Result<Math> {
-    let (i, mut source) = raw_env("equation")(i)?;
-    let label = match opt(command("label", label_value))(source)? {
-        (_, None) => None,
-        (j, Some(label)) => {
-            let (j, _) = inline_ws(j)?;
-            source = j;
-            Some(label)
-        }
-    };
+    let before = i;
+    let (i, content) = raw_env("equation")(i)?;
+    let (_, label) = opt(command("label", label_value))(content)?;
 
-    Ok((i, Math::Display { source, label }))
+    Ok((
+        i,
+        Math::Display {
+            source: consumed_slice(before, i),
+            label,
+        },
+    ))
 }
 pub fn display_math_double_dollar(i: &str) -> Result<Math> {
+    let before = i;
     let (i, _) = tag("$$")(i)?;
     let (i, _) = inline_ws(i)?;
-
-    let (i, label) = match opt(command("label", label_value))(i)? {
-        (j, None) => (j, None),
-        (j, Some(label)) => {
-            let (j, _) = inline_ws(j)?;
-            (j, Some(label))
-        }
-    };
-
-    let (i, source) = take_while(|c| c != '$')(i)?;
-    let source = source.trim_end();
-
+    let (i, content) = take_while(|c| c != '$')(i)?;
+    let (_, label) = opt(command("label", label_value))(content)?;
     let (i, _) = tag("$$")(i)?;
 
-    Ok((i, Math::Display { source, label }))
+    Ok((
+        i,
+        Math::Display {
+            source: consumed_slice(before, i),
+            label,
+        },
+    ))
 }
 
 pub fn mathpar(i: &str) -> Result<Math> {
-    let (i, mut source) = raw_env("mathpar")(i)?;
-    let label = match opt(command("label", label_value))(source)? {
-        (_, None) => None,
-        (j, Some(label)) => {
-            let (j, _) = inline_ws(j)?;
-            source = j;
-            Some(label)
-        }
-    };
+    let before = i;
+    let (i, content) = raw_env("mathpar")(i)?;
+    let (_, label) = opt(command("label", label_value))(content)?;
 
-    Ok((i, Math::Mathpar { source, label }))
+    Ok((
+        i,
+        Math::Mathpar {
+            source: consumed_slice(before, i),
+            label,
+        },
+    ))
 }
 
 pub fn label_value(i: &str) -> Result<&str> {
