@@ -69,10 +69,10 @@ pub fn latex_to_svg(preamble: &str, latex: &str) -> Result<String, LatexToSvgErr
     pdf2svg_cmd.arg(&svg_file_path);
     let pdf2svg_output = pdf2svg_cmd.output()?;
     if !pdf2svg_output.status.success() {
-        return Err(LatexToSvgError::PdfCrop(pdf2svg_output));
+        return Err(LatexToSvgError::Pdf2Svg(pdf2svg_output));
     }
 
-    let svg = std::fs::read_to_string(&svg_file_path).unwrap();
+    let svg = std::fs::read_to_string(&svg_file_path)?;
     Ok(svg)
 }
 
@@ -178,8 +178,6 @@ fn test_inline_math_to_svg() {
 pub struct DisplayMathSvg(pub String);
 
 pub fn display_math_to_svg(preamble: &str, math: &str) -> Result<DisplayMathSvg, LatexToSvgError> {
-    println!("Compiling display math:");
-    println!("{math}");
     let wrapped_math = formatdoc! {r#"
         \begin{{equation}}
             {math} \nonumber
@@ -250,7 +248,7 @@ pub fn emit_math_svg_files<'a, 'b>(
     out_dir: &'a Path,
     preamble: &str,
     math: impl Iterator<Item = &'b Math<'b>>,
-) {
+) -> Result<(), (&'b Math<'b>, LatexToSvgError)> {
     let out_dir = out_dir.join(SVG_OUT_DIR);
     fs::create_dir_all(&out_dir).unwrap();
 
@@ -278,7 +276,7 @@ pub fn emit_math_svg_files<'a, 'b>(
                     svg,
                     height_em,
                     baseline_em,
-                } = inline_math_to_svg(preamble, src).unwrap();
+                } = inline_math_to_svg(preamble, src).map_err(|err| (math, err))?;
                 let y_em_offset = height_em - baseline_em;
                 // Match all img files with src attribute ending in the filename.
                 writedoc! {offsets_file, r#"
@@ -291,11 +289,13 @@ pub fn emit_math_svg_files<'a, 'b>(
                 svg
             }
             Display { source, label: _ } => {
-                let DisplayMathSvg(svg) = display_math_to_svg(preamble, source).unwrap();
+                let DisplayMathSvg(svg) =
+                    display_math_to_svg(preamble, source).map_err(|err| (math, err))?;
                 svg
             }
             Mathpar { source, label: _ } => {
-                let DisplayMathSvg(svg) = mathpar_math_to_svg(preamble, source).unwrap();
+                let DisplayMathSvg(svg) =
+                    mathpar_math_to_svg(preamble, source).map_err(|err| (math, err))?;
                 svg
             }
         };
@@ -304,4 +304,6 @@ pub fn emit_math_svg_files<'a, 'b>(
         fs::write(&svg_path_tmp, svg).unwrap();
         fs::rename(svg_path_tmp, svg_path).unwrap();
     }
+
+    Ok(())
 }

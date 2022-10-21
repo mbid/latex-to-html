@@ -2,15 +2,15 @@ use crate::ast::*;
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take_while, take_while1};
 use nom::character::complete::{char, digit1, none_of, one_of};
-use nom::combinator::{cut, opt};
+use nom::combinator::{cut, eof, opt};
 use nom::multi::{many0, many1};
 use nom::sequence::{pair, tuple};
 use nom::{IResult, Parser};
 use std::str::FromStr;
 
-type Error<'a> = nom::error::Error<&'a str>;
+pub type Error<'a> = nom::error::Error<&'a str>;
 
-type Result<'a, O> = IResult<&'a str, O, Error<'a>>;
+pub type Result<'a, O> = IResult<&'a str, O, Error<'a>>;
 
 pub fn consumed_slice<'a>(before: &'a str, after: &'a str) -> &'a str {
     assert!(after.len() <= before.len());
@@ -257,14 +257,6 @@ pub fn raw_env<'a>(name: &'static str) -> impl Fn(&'a str) -> Result<'a, &'a str
         let (i, _) = inline_ws(i)?;
         let (i, (content, _)) = take_until(pair(inline_ws, command("end", tag(name))))(i)?;
         Ok((i, content))
-    }
-}
-
-pub fn no_arg_command<'a>(name: &'static str) -> impl FnMut(&'a str) -> Result<()> {
-    move |i: &'a str| {
-        let (i, _) = char('\\')(i)?;
-        let (i, _) = tag(name).parse(i)?;
-        Ok((i, ()))
     }
 }
 
@@ -684,6 +676,7 @@ pub fn document<'a>(i: &'a str) -> Result<Document<'a>> {
     let (i, _) = any_ws(i)?;
     let (i, _) = command("end", tag("document"))(i)?;
     let (i, _) = any_ws(i)?;
+    let (i, _) = eof(i)?;
     let doc = Document {
         config,
         preamble,
