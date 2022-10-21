@@ -676,7 +676,7 @@ pub fn document<'a>(i: &'a str) -> Result<Document<'a>> {
     let (i, _) = any_ws(i)?;
     let (i, _) = documentclass(i)?;
     let (i, (preamble, _)) = take_until(command("begin", tag("document")))(i)?;
-    let preamble = preamble_lines(preamble).unwrap().1.join("\n");
+    let preamble = preamble_lines(preamble)?.1.join("\n");
     let config = DocumentConfig::default();
     let (i, _) = any_ws(i)?;
     let document_part = |i: &'a str| document_part(&config, i);
