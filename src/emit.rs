@@ -579,14 +579,15 @@ const STYLE: &'static str = indoc! {r#"
         overflow: auto;
     }
 
-    .display-math-row > * {
+    .display-math-row > img {
         margin: auto;
     }
 
     .display-math-row > span {
+        margin: auto 0;
         display: inline-flex;
         flex-direction: row-reverse;
-        flex-grow: 1;
+        padding-left: 1em;
     }
 
     .display-math-row > span:first-child {
