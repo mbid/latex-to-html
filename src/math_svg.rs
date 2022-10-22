@@ -109,16 +109,23 @@ fn test_latex_to_svg() {
     latex_to_svg(preamble, math).unwrap();
 }
 
-pub struct InlineMathSvg {
-    pub svg: String,
-    pub baseline_em: f64,
+pub struct SvgInfo {
+    pub width_em: f64,
     pub height_em: f64,
+    pub baseline_em: Option<f64>,
 }
 
-pub fn svg_height_to_em(
-    mut svg: minidom::Element,
-) -> Result<(minidom::Element, f64), LatexToSvgError> {
+// Converts the dimensions of the svg from pt to em. Returns (width, height) in em.
+pub fn svg_dimensions_to_em(svg: &mut minidom::Element) -> Result<(f64, f64), LatexToSvgError> {
     let bad_svg = || LatexToSvgError::BadSvg;
+
+    let width_attr = svg.attr("width").ok_or(bad_svg())?;
+    let width_pt: f64 = width_attr
+        .strip_suffix("pt")
+        .ok_or(bad_svg())?
+        .parse()
+        .map_err(|_| bad_svg())?;
+    let width_em = width_pt / 10.0;
 
     let height_attr = svg.attr("height").ok_or(bad_svg())?;
     let height_pt: f64 = height_attr
@@ -126,25 +133,17 @@ pub fn svg_height_to_em(
         .ok_or(bad_svg())?
         .parse()
         .map_err(|_| bad_svg())?;
-
     let height_em = height_pt / 10.0;
-    svg.set_attr("height", format!("{height_em}em"));
-    svg.set_attr("width", format!("100%"));
 
-    Ok((svg, height_em))
+    svg.set_attr("width", format!("{width_em}em"));
+    svg.set_attr("height", format!("{height_em}em"));
+
+    Ok((width_em, height_em))
 }
 
-pub fn inline_math_to_svg(preamble: &str, math: &str) -> Result<InlineMathSvg, LatexToSvgError> {
-    let wrapped_math = formatdoc! {r#"
-        $\makebox[0pt][l]{{\rule{{1pt}}{{1pt}}}}{math}$
-    "#};
-
-    let svg = latex_to_svg(preamble, &wrapped_math)?;
-
-    let bad_svg = || LatexToSvgError::BadSvg;
-    let svg_el: minidom::Element = svg.parse().map_err(|_| bad_svg())?;
-    let (mut svg_el, height_em) = svg_height_to_em(svg_el)?;
-
+// Removes the baseline point from the svg. Returns the y coordinate of the center of the point,
+// i.e. the y-coordinate that corresponds to the baseline.
+pub fn remove_baseline_point(svg_el: &mut minidom::Element) -> Result<f64, LatexToSvgError> {
     let bad_svg = || LatexToSvgError::BadSvg;
 
     let g_el: &mut minidom::element::Element = svg_el
@@ -166,40 +165,41 @@ pub fn inline_math_to_svg(preamble: &str, math: &str) -> Result<InlineMathSvg, L
     let y: f64 = y_str.parse().map_err(|_| bad_svg())?;
 
     let baseline_em = (y + 0.5) / 10.0;
-    Ok(InlineMathSvg {
-        svg: String::from(&svg_el),
-        baseline_em,
-        height_em,
-    })
+    Ok(baseline_em)
 }
 
-#[test]
-fn test_inline_math_to_svg() {
-    inline_math_to_svg("", "5 + 3 + N").unwrap();
-}
+pub fn math_to_svg(
+    preamble: &str,
+    math: &Math,
+) -> Result<(minidom::Element, SvgInfo), LatexToSvgError> {
+    use Math::*;
+    let latex = match math {
+        Inline(content) => {
+            formatdoc! {r#"
+                    $\makebox[0pt][l]{{\rule{{1pt}}{{1pt}}}}{content}$
+                "#}
+        }
+        Display { source, .. } | Mathpar { source, .. } => source.to_string(),
+    };
 
-pub struct DisplayMathSvg(pub String);
-
-pub fn display_math_to_svg(preamble: &str, math: &str) -> Result<DisplayMathSvg, LatexToSvgError> {
-    let svg = latex_to_svg(preamble, &math)?;
-
+    let svg = latex_to_svg(preamble, &latex)?;
     let bad_svg = || LatexToSvgError::BadSvg;
+    let mut svg_el: minidom::Element = svg.parse().map_err(|_| bad_svg())?;
+    let (width_em, height_em) = svg_dimensions_to_em(&mut svg_el)?;
 
-    let svg_el: minidom::Element = svg.parse().map_err(|_| bad_svg())?;
-    let (svg_el, _) = svg_height_to_em(svg_el)?;
+    let baseline_em = match math {
+        Inline(_) => Some(remove_baseline_point(&mut svg_el)?),
+        Display { .. } | Mathpar { .. } => None,
+    };
 
-    Ok(DisplayMathSvg(String::from(&svg_el)))
-}
-
-pub fn mathpar_math_to_svg(preamble: &str, math: &str) -> Result<DisplayMathSvg, LatexToSvgError> {
-    let svg = latex_to_svg(preamble, math)?;
-
-    let bad_svg = || LatexToSvgError::BadSvg;
-
-    let svg_el: minidom::Element = svg.parse().map_err(|_| bad_svg())?;
-    let (svg_el, _) = svg_height_to_em(svg_el)?;
-
-    Ok(DisplayMathSvg(String::from(&svg_el)))
+    Ok((
+        svg_el,
+        SvgInfo {
+            width_em,
+            height_em,
+            baseline_em,
+        },
+    ))
 }
 
 pub struct MathDigest(pub [u8; 32]);
@@ -245,12 +245,12 @@ pub fn emit_math_svg_files<'a, 'b>(
     let out_dir = out_dir.join(SVG_OUT_DIR);
     fs::create_dir_all(&out_dir).unwrap();
 
-    let offsets_path = out_dir.join("offsets.css");
-    let mut offsets_file = OpenOptions::new()
+    let geometry_path = out_dir.join("geometry.css");
+    let mut geometry_file = OpenOptions::new()
         .write(true)
         .append(true)
         .create(true)
-        .open(offsets_path)
+        .open(geometry_path)
         .unwrap();
 
     for math in math {
@@ -262,39 +262,32 @@ pub fn emit_math_svg_files<'a, 'b>(
             continue;
         }
 
-        use Math::*;
-        let svg = match math {
-            Inline(src) => {
-                let InlineMathSvg {
-                    svg,
-                    height_em,
-                    baseline_em,
-                } = inline_math_to_svg(preamble, src).map_err(|err| (math, err))?;
-                let y_em_offset = height_em - baseline_em;
-                // Match all img files with src attribute ending in the filename.
-                writedoc! {offsets_file, r#"
-                    img[src$="{digest}.svg"] {{
-                    top: {y_em_offset}em;
-                    }}
-                "#}
-                .unwrap();
-                offsets_file.sync_data().unwrap();
-                svg
-            }
-            Display { source, label: _ } => {
-                let DisplayMathSvg(svg) =
-                    display_math_to_svg(preamble, source).map_err(|err| (math, err))?;
-                svg
-            }
-            Mathpar { source, label: _ } => {
-                let DisplayMathSvg(svg) =
-                    mathpar_math_to_svg(preamble, source).map_err(|err| (math, err))?;
-                svg
-            }
-        };
+        let (
+            svg,
+            SvgInfo {
+                width_em,
+                height_em,
+                baseline_em,
+            },
+        ) = math_to_svg(preamble, math).map_err(|err| (math, err))?;
 
         let svg_path_tmp = svg_path.with_file_name(format!("{svg_filename}.tmp"));
-        fs::write(&svg_path_tmp, svg).unwrap();
+        fs::write(&svg_path_tmp, &String::from(&svg)).unwrap();
+
+        let top_em = match baseline_em {
+            None => 0.0,
+            Some(baseline_em) => height_em - baseline_em,
+        };
+        writedoc! {geometry_file, r#"
+            img[src$="{digest}.svg"] {{
+                width: {width_em}em;
+                height: {height_em}em;
+                top: {top_em}em;
+            }}
+        "#}
+        .unwrap();
+        geometry_file.sync_data().unwrap();
+
         fs::rename(svg_path_tmp, svg_path).unwrap();
     }
 

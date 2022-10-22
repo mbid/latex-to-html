@@ -188,7 +188,7 @@ pub fn display_head(title: impl Display) -> impl Display {
               <title>{title}</title>
               <link rel="stylesheet" type="text/css" href="https://cdn.rawgit.com/dreampulse/computer-modern-web-font/master/fonts.css">
               <link rel="stylesheet" type="text/css" href="style.css">
-              <link rel="stylesheet" type="text/css" href="{SVG_OUT_DIR}/offsets.css">
+              <link rel="stylesheet" type="text/css" href="{SVG_OUT_DIR}/geometry.css">
               </head>
         "#}?;
         Ok(())
