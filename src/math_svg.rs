@@ -1,6 +1,8 @@
 use crate::ast::*;
 use indoc::{formatdoc, writedoc};
+use rayon::prelude::*;
 use sha2::{Digest, Sha256};
+use std::collections::HashSet;
 use std::fmt::{self, Display, Formatter};
 use std::fs::{self, File, OpenOptions};
 use std::io;
@@ -202,6 +204,7 @@ pub fn math_to_svg(
     ))
 }
 
+#[derive(Copy, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MathDigest(pub [u8; 32]);
 
 impl Display for MathDigest {
@@ -240,11 +243,46 @@ pub const SVG_OUT_DIR: &'static str = "img-math";
 pub fn emit_math_svg_files<'a, 'b>(
     out_dir: &'a Path,
     preamble: &str,
-    math: impl Iterator<Item = &'b Math<'b>>,
+    math: &[&'b Math<'b>],
 ) -> Result<(), (&'b Math<'b>, LatexToSvgError)> {
     let out_dir = out_dir.join(SVG_OUT_DIR);
     fs::create_dir_all(&out_dir).unwrap();
 
+    // Collect all math nodes that need to be compiled. There may be duplicate new math nodes;
+    // these need to be compiled only once. We detect duplicates by saving digests in a hash set.
+    let mut old_math_digests: HashSet<MathDigest> = HashSet::new();
+    let new_math: Vec<&'b Math<'b>> = math
+        .iter()
+        .copied()
+        .filter(|math| {
+            let digest = hash_math(preamble, &math);
+            let svg_path = out_dir.join(&format!("{digest}.svg"));
+            let is_new = !old_math_digests.contains(&digest) && !svg_path.exists();
+            old_math_digests.insert(digest);
+            is_new
+        })
+        .collect();
+
+    // Compile math nodes to svgs in parallel. We write to temporary files first and rename later
+    // for two reasons:
+    // - To ensure consistency via an atomic rename.
+    // - To ensure that we have writting geometry information to the css file if the svg file
+    //   exists.
+    let new_infos: Vec<Result<SvgInfo, LatexToSvgError>> = new_math
+        .par_iter()
+        .copied()
+        .map(|math| {
+            let digest = hash_math(preamble, &math);
+            let svg_path_tmp = out_dir.join(&format!("{digest}.svg.tmp"));
+
+            let (svg, svg_info) = math_to_svg(preamble, math)?;
+            fs::write(&svg_path_tmp, &String::from(&svg)).unwrap();
+            Ok(svg_info)
+        })
+        .collect();
+
+    // Open the css file containing geometry information about the svgs. We append if it already
+    // exists and create otherwise.
     let geometry_path = out_dir.join("geometry.css");
     let mut geometry_file = OpenOptions::new()
         .write(true)
@@ -253,31 +291,26 @@ pub fn emit_math_svg_files<'a, 'b>(
         .open(geometry_path)
         .unwrap();
 
-    for math in math {
-        let digest = hash_math(preamble, &math);
-
-        let svg_filename = format!("{digest}.svg");
-        let svg_path = out_dir.join(&svg_filename);
-        if svg_path.exists() {
-            continue;
-        }
-
-        let (
-            svg,
-            SvgInfo {
-                width_em,
-                height_em,
-                baseline_em,
-            },
-        ) = math_to_svg(preamble, math).map_err(|err| (math, err))?;
-
-        let svg_path_tmp = svg_path.with_file_name(format!("{svg_filename}.tmp"));
-        fs::write(&svg_path_tmp, &String::from(&svg)).unwrap();
+    // Write geometry info for new math svgs to the css file.
+    for (math, svg_info) in new_math.iter().copied().zip(new_infos.iter()) {
+        let SvgInfo {
+            width_em,
+            height_em,
+            baseline_em,
+        } = match svg_info {
+            Ok(svg_info) => svg_info,
+            Err(_) => {
+                continue;
+            }
+        };
 
         let top_em = match baseline_em {
             None => 0.0,
             Some(baseline_em) => height_em - baseline_em,
         };
+
+        let digest = hash_math(preamble, &math);
+
         writedoc! {geometry_file, r#"
             img[src$="{digest}.svg"] {{
                 width: {width_em}em;
@@ -286,9 +319,27 @@ pub fn emit_math_svg_files<'a, 'b>(
             }}
         "#}
         .unwrap();
-        geometry_file.sync_data().unwrap();
+    }
+    geometry_file.sync_data().unwrap();
+
+    // Rename temporary svg files.
+    for (math, svg_info) in new_math.iter().copied().zip(new_infos.iter()) {
+        if svg_info.is_err() {
+            continue;
+        }
+
+        let digest = hash_math(preamble, &math);
+        let svg_path = out_dir.join(&format!("{digest}.svg"));
+        let svg_path_tmp = out_dir.join(&format!("{digest}.svg.tmp"));
 
         fs::rename(svg_path_tmp, svg_path).unwrap();
+    }
+
+    // Return the first error, if any.
+    for (math, svg_info) in new_math.iter().copied().zip(new_infos) {
+        if let Err(err) = svg_info {
+            return Err((math, err));
+        }
     }
 
     Ok(())

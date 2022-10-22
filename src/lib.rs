@@ -71,7 +71,7 @@ pub fn latex_to_html(tex_path: &Path, bib_path: &Path, out_path: &Path) {
 
     emit(&out_path, &doc, &analysis);
     use LatexToSvgError::*;
-    match emit_math_svg_files(&out_path, &doc.preamble, node_lists.math.iter().copied()) {
+    match emit_math_svg_files(&out_path, &doc.preamble, &node_lists.math) {
         Ok(()) => (),
         Err((math, error)) => {
             use Math::*;
