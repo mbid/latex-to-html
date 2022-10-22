@@ -573,11 +573,14 @@ const STYLE: &'static str = indoc! {r#"
 
     .display-math-row {
         display: flex;
-        justify-content: center;
         flex-direction: row;
-        align-items: center;
         margin-top: 0.5em;
         margin-bottom: 0.5em;
+        overflow: auto;
+    }
+
+    .display-math-row > * {
+        margin: auto;
     }
 
     .display-math-row > span {
