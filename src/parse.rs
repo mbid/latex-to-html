@@ -219,16 +219,6 @@ pub fn env<'a, O>(
     }
 }
 
-#[test]
-fn test_env() {
-    assert_eq!(
-        env("asdf", tag("123"))("\\begin{asdf}\n123\n\\end{asdf}"),
-        Ok(("", "123"))
-    );
-    assert!(env("asdf", tag("123"))("\\begin{asdf}\n1\n\\end{asdf}").is_err());
-    assert!(env("asdf", tag("123"))("\\begin{asdf}\n123\n\\end{xyz}").is_err());
-}
-
 pub fn take_until<'a, O>(
     mut until_parser: impl FnMut(&'a str) -> Result<'a, O>,
 ) -> impl FnMut(&'a str) -> Result<'a, (&'a str, O)> {

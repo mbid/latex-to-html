@@ -81,36 +81,6 @@ pub fn latex_to_svg(preamble: &str, latex: &str) -> Result<String, LatexToSvgErr
     Ok(svg)
 }
 
-#[test]
-fn test_latex_to_svg() {
-    let preamble = indoc::indoc! {r#"
-        \usepackage[utf8]{inputenc}
-        \usepackage[english]{babel}
-        \usepackage{amsfonts}
-        \usepackage{amsmath}
-        \usepackage{amsthm}
-        \usepackage{amssymb}
-        \usepackage{dsfont}
-        \usepackage{url}
-        \usepackage{hyperref}
-        \usepackage{tikz-cd}
-        \usepackage{mathtools}
-        
-        \mathtoolsset{showonlyrefs}
-    "#};
-
-    let math = indoc::indoc! {r#"
-        \begin{equation}
-            \begin{tikzcd}
-              A \arrow[r] \arrow[d] & X \\
-              B \arrow[ur, dashed]
-            \end{tikzcd}
-        \end{equation}
-    "#};
-
-    latex_to_svg(preamble, math).unwrap();
-}
-
 pub struct SvgInfo {
     pub width_em: f64,
     pub height_em: f64,
