@@ -10,6 +10,7 @@ use std::io;
 use std::io::Write as IoWrite;
 use std::path::Path;
 use std::process::{self, Command};
+use std::sync::mpsc::channel;
 use tempdir::TempDir;
 
 fn write_latex(out: &mut impl io::Write, preamble: &[&str], latex: &str) -> Result<(), io::Error> {
@@ -339,33 +340,24 @@ pub fn emit_math_svg_files<'a, 'b>(
         })
         .collect();
 
-    // If we have a lot of math to compile, check whether the preamble is OK first.
-    if new_math.len() > 16 {
-        let first_math = *new_math.first().unwrap();
-        let output =
-            dummy_pdf_latex(preamble).map_err(|err| (first_math, LatexToSvgError::Io(err)))?;
-        if !output.status.success() {
-            return Err((first_math, LatexToSvgError::PdfLatex(output)));
-        }
-    }
-
     // Compile math nodes to svgs in parallel. We write to temporary files first and rename later
-    // for two reasons:
-    // - To ensure consistency via an atomic rename.
-    // - To ensure that we have writting geometry information to the css file if the svg file
-    //   exists.
-    let new_infos: Vec<Result<SvgInfo, LatexToSvgError>> = new_math
-        .par_iter()
-        .copied()
-        .map(|math| {
-            let digest = hash_math(preamble, &math);
-            let svg_path_tmp = out_dir.join(&format!("{digest}.svg.tmp"));
+    // to ensure consistency: We don't want files containing only partial contents, and we want to
+    // have the geometry information in the css file if the svg file exists.
+    let (compiled_math_sender, compiled_math_receiver) = channel::<(&'b Math<'b>, SvgInfo)>();
+    let compile_math_result: Result<(), (&'b Math<'b>, LatexToSvgError)> =
+        new_math.par_iter().copied().try_for_each_with(
+            compiled_math_sender,
+            |compiled_math_sender, math: &'b Math<'b>| {
+                let digest = hash_math(preamble, &math);
+                let svg_path_tmp = out_dir.join(&format!("{digest}.svg.tmp"));
 
-            let (svg, svg_info) = math_to_svg(preamble, math)?;
-            fs::write(&svg_path_tmp, &String::from(&svg)).unwrap();
-            Ok(svg_info)
-        })
-        .collect();
+                let (svg, svg_info) = math_to_svg(preamble, math).map_err(|err| (math, err))?;
+                fs::write(&svg_path_tmp, &String::from(&svg)).unwrap();
+                compiled_math_sender.send((math, svg_info)).unwrap();
+                Ok(())
+            },
+        );
+    let compiled_math: Vec<(&'b Math<'b>, SvgInfo)> = compiled_math_receiver.iter().collect();
 
     // Open the css file containing geometry information about the svgs. We append if it already
     // exists and create otherwise.
@@ -378,17 +370,12 @@ pub fn emit_math_svg_files<'a, 'b>(
         .unwrap();
 
     // Write geometry info for new math svgs to the css file.
-    for (math, svg_info) in new_math.iter().copied().zip(new_infos.iter()) {
+    for (math, svg_info) in compiled_math.iter() {
         let SvgInfo {
             width_em,
             height_em,
             baseline_em,
-        } = match svg_info {
-            Ok(svg_info) => svg_info,
-            Err(_) => {
-                continue;
-            }
-        };
+        } = svg_info;
 
         let top_em = match baseline_em {
             None => 0.0,
@@ -396,7 +383,6 @@ pub fn emit_math_svg_files<'a, 'b>(
         };
 
         let digest = hash_math(preamble, &math);
-
         writedoc! {geometry_file, r#"
             img[src$="{digest}.svg"] {{
                 width: {width_em}em;
@@ -409,11 +395,7 @@ pub fn emit_math_svg_files<'a, 'b>(
     geometry_file.sync_data().unwrap();
 
     // Rename temporary svg files.
-    for (math, svg_info) in new_math.iter().copied().zip(new_infos.iter()) {
-        if svg_info.is_err() {
-            continue;
-        }
-
+    for (math, _) in compiled_math.iter() {
         let digest = hash_math(preamble, &math);
         let svg_path = out_dir.join(&format!("{digest}.svg"));
         let svg_path_tmp = out_dir.join(&format!("{digest}.svg.tmp"));
@@ -421,12 +403,5 @@ pub fn emit_math_svg_files<'a, 'b>(
         fs::rename(svg_path_tmp, svg_path).unwrap();
     }
 
-    // Return the first error, if any.
-    for (math, svg_info) in new_math.iter().copied().zip(new_infos) {
-        if let Err(err) = svg_info {
-            return Err((math, err));
-        }
-    }
-
-    Ok(())
+    compile_math_result
 }
