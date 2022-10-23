@@ -24,12 +24,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bytes"
-version = "1.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec8a7b6a70fde80372154c65702f00a0f56f3e1c36abbc6c440484be248856db"
-
-[[package]]
 name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -170,14 +164,14 @@ dependencies = [
 
 [[package]]
 name = "latex-to-html"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "base64",
  "convert_case",
  "hex",
  "indoc",
  "itertools",
- "minidom 0.15.0",
+ "minidom",
  "minidom_writer",
  "nom",
  "rayon",
@@ -216,21 +210,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "minidom"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9dddfe21863f8d600ed2bd1096cb9b5cd6ff984be6185cf9d563fb4a107bffc5"
-dependencies = [
- "rxml",
-]
-
-[[package]]
 name = "minidom_writer"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4805cb3bc36ac5a8e9da54798654983867648d4b2179bbcb62add917b148f51e"
 dependencies = [
- "minidom 0.12.0",
+ "minidom",
  "quick-xml",
  "thiserror",
 ]
@@ -260,12 +245,6 @@ dependencies = [
  "hermit-abi",
  "libc",
 ]
-
-[[package]]
-name = "pin-project-lite"
-version = "0.2.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e0a7ae3ac2f1173085d398531c705756c94a4c56843785df85a60c1a0afac116"
 
 [[package]]
 name = "proc-macro2"
@@ -365,25 +344,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rxml"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8c7c4cd1e0a04c48f953473383a60143884515b7a8eb7ca7d9b1baa9c05dee75"
-dependencies = [
- "bytes",
- "pin-project-lite",
- "rxml_validation",
- "smartstring",
- "tokio",
-]
-
-[[package]]
-name = "rxml_validation"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8633dff4bb93061867c8411c6e99068c5f59d9f890c87384169004b0fbb929a"
-
-[[package]]
 name = "scopeguard"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -399,21 +359,6 @@ dependencies = [
  "cpufeatures",
  "digest",
 ]
-
-[[package]]
-name = "smartstring"
-version = "0.2.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e714dff2b33f2321fdcd475b71cec79781a692d846f37f415fb395a1d2bcd48e"
-dependencies = [
- "static_assertions",
-]
-
-[[package]]
-name = "static_assertions"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "syn"
@@ -454,18 +399,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "tokio"
-version = "1.21.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9e03c497dc955702ba729190dc4aac6f2a0ce97f913e5b1b5912fc5039d9099"
-dependencies = [
- "autocfg",
- "bytes",
- "memchr",
- "pin-project-lite",
 ]
 
 [[package]]
