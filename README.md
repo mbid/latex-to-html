@@ -2,7 +2,7 @@
 
 latex-to-html converts a subset of latex to html.
 It renders formulas as vector graphics, so that they look exactly as they would in a pdf.  
-[**Example**](https://www.mbid.me/lcc-model)
+[**Example**](https://latex-to-html.mbid.me/)
 
 ## Features
 
