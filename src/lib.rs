@@ -66,6 +66,67 @@ pub fn print_latex_to_svg_error(
     math: &Math,
     error: &LatexToSvgError,
 ) {
+    // First obtain the output from just compiling a dummy formuala with the preamble. This way,
+    // we can either diagnose problems with the preamble (if there are some) or remove irrelevant
+    // parts from the output for compiling the formula at hand.
+    let default_output = match diagnose_preamble(preamble).unwrap() {
+        PreambleDiagnosis::Ok(output) => output,
+        PreambleDiagnosis::OffendingLines(output, lines) => {
+            let location = match lines {
+                [] => Location(0, 1),
+                [line] => {
+                    let begin = tex_src.offset(line);
+                    let end = begin + line.len();
+                    Location(begin, end)
+                }
+                [first_line, .., last_line] => {
+                    let begin = tex_src.offset(first_line);
+                    let end = tex_src.offset(last_line) + last_line.len();
+                    Location(begin, end)
+                }
+            };
+
+            let location_display = SourceDisplay {
+                source: tex_src,
+                location,
+                source_path: Some(tex_path),
+                underlined: false,
+            };
+
+            let stdout = from_utf8(&output.stdout).unwrap();
+
+            eprintdoc! {r#"
+                Error: Preamble is invalid
+                {location_display}
+
+                Note: Your preamble must be compatible with the "minimal" documentclass.
+                      Try adding the line
+
+                        % LATEX_TO_HTML_IGNORE
+                         
+                      to make latex-to-html ignore the next line.
+
+                ================================================================================
+                {stdout}
+            "#};
+            return;
+        }
+    };
+
+    use LatexToSvgError::*;
+    let pdf_latex_output = match error {
+        PdfLatex(output) => output,
+        err => {
+            eprintdoc! {"
+                Internal error while generating svg:
+                {err:?}
+            "};
+            return;
+        }
+    };
+
+    let stdout = from_utf8(&pdf_latex_output.stdout).unwrap();
+
     use Math::*;
     let math_source = match math {
         Inline(src) => src,
@@ -85,35 +146,11 @@ pub fn print_latex_to_svg_error(
         },
     };
 
-    use LatexToSvgError::*;
-    let pdf_latex_output = match error {
-        PdfLatex(output) => output,
-        err => {
-            eprintdoc! {"
-                Internal error while generating svg:
-                {err:?}
-            "};
-            return;
-        }
-    };
-
-    let stdout = from_utf8(&pdf_latex_output.stdout).unwrap();
-
-    let default_output = default_pdf_latex_output(preamble).unwrap();
-    if !default_output.status.success() {
-        eprintdoc! {r#"
-            Error: Preamble is invalid
-            Note: Your preamble must be compatible with the "minimal" documentclass.
-
-            {stdout}
-        "#};
-        return;
-    }
-
     eprintdoc! {r#"
         Error: Math formula is invalid
         {location_display}
 
+        ================================================================================
     "#};
 
     let default_stdout = from_utf8(&default_output.stdout).unwrap();

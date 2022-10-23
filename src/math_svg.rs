@@ -55,15 +55,96 @@ pub fn pdf_latex(tex_file_path: &Path) -> Result<process::Output, io::Error> {
     Ok(output)
 }
 
-pub fn default_pdf_latex_output(preamble: &[&str]) -> Result<process::Output, io::Error> {
+pub enum PreambleDiagnosis<'a> {
+    Ok(process::Output),
+    OffendingLines(process::Output, &'a [&'a str]),
+}
+
+pub fn dummy_pdf_latex(preamble: &[&str]) -> Result<process::Output, io::Error> {
+    let dummy_content = "$123$";
+
     let tmp_dir = TempDir::new("latex-to-html")?;
     let tex_file_path = tmp_dir.path().join("doc.tex");
     let mut tex_file = File::create(&tex_file_path)?;
-
-    let dummy_content = "$123$";
     write_latex(&mut tex_file, preamble, dummy_content)?;
-    let pdf_latex_output = pdf_latex(&tex_file_path)?;
-    Ok(pdf_latex_output)
+    pdf_latex(&tex_file_path)
+}
+
+pub fn has_even_curly_braces(preamble_part: &[&str]) -> bool {
+    let mut open = 0;
+    let mut close = 0;
+    for c in preamble_part
+        .iter()
+        .copied()
+        .map(|line| line.chars())
+        .flatten()
+    {
+        if c == '{' {
+            open += 1;
+        }
+        if c == '}' {
+            close += 1;
+        }
+    }
+
+    open == close
+}
+
+pub fn split_preamble(preamble_part: &[&str]) -> Option<usize> {
+    if preamble_part.len() < 2 {
+        return None;
+    }
+
+    let mut split_index = preamble_part.len() / 2;
+
+    // If the split resulted in an unmatched curly braces in the lower part, reduce the split index
+    // until curly braces are matched.
+    while split_index > 0 && !has_even_curly_braces(&preamble_part[0..split_index]) {
+        split_index -= 1;
+    }
+
+    // If we couldn't find a split with matching curly braces, try again but this time increase the
+    // split index.
+    if split_index == 0 {
+        split_index = preamble_part.len() / 2;
+        while split_index < preamble_part.len()
+            && !has_even_curly_braces(&preamble_part[0..split_index])
+        {
+            split_index += 1;
+        }
+        if split_index == preamble_part.len() {
+            return None;
+        }
+    }
+
+    Some(split_index)
+}
+
+pub fn diagnose_preamble<'a>(preamble: &'a [&'a str]) -> Result<PreambleDiagnosis<'a>, io::Error> {
+    let output = dummy_pdf_latex(preamble)?;
+    if output.status.success() {
+        return Ok(PreambleDiagnosis::Ok(output));
+    }
+
+    let mut known_good = 0;
+    let mut known_bad = preamble.len();
+    let mut bad_output = output;
+
+    while let Some(split_index) = split_preamble(&preamble[known_good..known_bad]) {
+        let split_index = split_index + known_good;
+        let output = dummy_pdf_latex(&preamble[0..split_index])?;
+        if output.status.success() {
+            known_good = split_index;
+        } else {
+            bad_output = output;
+            known_bad = split_index;
+        }
+    }
+
+    Ok(PreambleDiagnosis::OffendingLines(
+        bad_output,
+        &preamble[known_good..known_bad],
+    ))
 }
 
 pub fn latex_to_svg(preamble: &[&str], latex: &str) -> Result<String, LatexToSvgError> {
