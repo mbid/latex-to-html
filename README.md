@@ -36,7 +36,7 @@ Outside of math environments, only a subset of tex/latex is supported:
 
 There is also basic support for `\bibliography`.
 
-Latex-to-html ignores the lines directly after a line containing the comment
+Latex-to-html ignores the lines directly after a line containing the following comment:
 ```
 % LATEX_TO_HTML_IGNORE
 ```
@@ -48,35 +48,32 @@ To use it for the generated pdf output anyway, the package can be included as fo
 % LATEX_TO_HTML_IGNORE
 \usepackage{enumitem}
 ```
-The appearance of numerals in an enumeration in the pdf output can now be changed like so:
+The appearance of numerals in an enumeration for the pdf output (but not the webpage) can then be changed like so:
 ```
 \begin{enumerate}
   % LATEX_TO_HTML_IGNORE
   [label={(\roman*)}]
   \item
-    first
+    ...
   \item
-    second
+    ...
 \end{enumerate}
 ```
 
 ## Installation
 
-Make sure to install all dependencies:
-latex-to-html depends on cargo (to build), pdflatex, pdfcrop and pdf2svg.
-On Debian or Ubuntu, the dependencies can be installed as follows:
+Make sure to install all dependencies first.
+latex-to-html depends on cargo, pdflatex, pdfcrop and pdf2svg.
+On Debian or Ubuntu, these dependencies can be installed as follows:
 ```
-sudo apt --yes install cargo texlive texlive-extra-utils pdf2svg
+sudo apt install cargo texlive texlive-extra-utils pdf2svg
 ```
 
-Once all dependencies are installed, download, build and install latex-to-html to `~/.cargo/bin`:
+To download and install latex-to-html to `~/.cargo/bin`, run the following:
 ```
-cd /tmp
-git clone https://github.com/mbid/latex-to-html
-cd latex-to-html
-cargo install --path .
+cargo install latex-to-html
 ```
-You can now either add `$HOME/.cargo/bin` to your `PATH` variable or simply specify the full path: `~/.cargo/bin/latex-to-html`.
+You can now either add `$HOME/.cargo/bin` to your `PATH` variable or simply specify the full path when you execute latex-to-html: `~/.cargo/bin/latex-to-html`.
 
 ## Usage
 
@@ -84,5 +81,5 @@ Assuming you have a `doc.tex` and a `doc.bib` file, run the following:
 ```
 latex-to-html doc.tex doc.bib out/
 ```
-This may take a while on the first run, but subseqeuent runs will be much faster.
+This may take a while on the first run, but subsequent runs will be much faster.
 To view the generated document, open `out/index.html` in your browser.
