@@ -2,6 +2,9 @@
 name = "latex-to-html"
 version = "0.1.0"
 edition = "2021"
+license = "GPL-3.0"
+description = "Datalog with equality"
+description = "Latex to html converter"
 
 [dependencies]
 nom = "7"
