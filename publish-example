@@ -1,0 +1,36 @@
+#!/bin/sh
+
+set -e
+set -x
+
+if [ "$(git rev-parse --show-toplevel)" != $(pwd) ]; then
+  echo "Error: Must be executed from the repository root" >&2
+  exit 1
+fi
+
+if [ "$(git rev-parse --abbrev-ref HEAD)" != "master" ]; then
+  echo "Error: Must be executed with the master branch checked out" >&2
+  exit 1
+fi
+
+if [ ! -z "$(git status --porcelain)" ]; then
+  echo "Error: Working directory must be clean" >&2
+  exit 1
+fi
+
+webpage_root="docs"
+
+initial_branch="$(git rev-parse --abbrev-ref HEAD)"
+
+git checkout pages
+git merge master
+cargo run example.tex example.bib $webpage_root
+if [ ! -z "$(git status --porcelain $webpage_root)" ]; then
+  git add -A $webpage_root
+  git commit -m 'Regenerate example'
+else
+  echo "No changes"
+fi
+git push
+
+git checkout master
