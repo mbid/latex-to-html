@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 license = "GPL-3.0"
 description = "Latex to html converter"
+repository = "https://github.com/mbid/latex-to-html"
 
 [dependencies]
 nom = "7"
