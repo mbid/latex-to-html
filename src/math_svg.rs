@@ -1,5 +1,6 @@
 use crate::ast::*;
 use indoc::{formatdoc, writedoc};
+use itertools::Itertools;
 use rayon::prelude::*;
 use sha2::{Digest, Sha256};
 use std::collections::HashSet;
@@ -9,9 +10,14 @@ use std::io;
 use std::io::Write as IoWrite;
 use std::path::Path;
 use std::process::{self, Command};
+use std::sync::mpsc::channel;
 use tempdir::TempDir;
 
-fn write_latex(out: &mut impl io::Write, preamble: &str, latex: &str) -> Result<(), io::Error> {
+fn write_latex(out: &mut impl io::Write, preamble: &[&str], latex: &str) -> Result<(), io::Error> {
+    let preamble = preamble
+        .iter()
+        .copied()
+        .format_with("\n", |line, f| f(&format_args!("{}", line)));
     // TODO: Get rid of mathtools here?
     writedoc! {out, r#"
         \documentclass{{minimal}}
@@ -50,18 +56,99 @@ pub fn pdf_latex(tex_file_path: &Path) -> Result<process::Output, io::Error> {
     Ok(output)
 }
 
-pub fn default_pdf_latex_output(preamble: &str) -> Result<process::Output, io::Error> {
+pub enum PreambleDiagnosis<'a> {
+    Ok(process::Output),
+    OffendingLines(process::Output, &'a [&'a str]),
+}
+
+pub fn dummy_pdf_latex(preamble: &[&str]) -> Result<process::Output, io::Error> {
+    let dummy_content = "$123$";
+
     let tmp_dir = TempDir::new("latex-to-html")?;
     let tex_file_path = tmp_dir.path().join("doc.tex");
     let mut tex_file = File::create(&tex_file_path)?;
-
-    let dummy_content = "$123$";
     write_latex(&mut tex_file, preamble, dummy_content)?;
-    let pdf_latex_output = pdf_latex(&tex_file_path)?;
-    Ok(pdf_latex_output)
+    pdf_latex(&tex_file_path)
 }
 
-pub fn latex_to_svg(preamble: &str, latex: &str) -> Result<String, LatexToSvgError> {
+pub fn has_even_curly_braces(preamble_part: &[&str]) -> bool {
+    let mut open = 0;
+    let mut close = 0;
+    for c in preamble_part
+        .iter()
+        .copied()
+        .map(|line| line.chars())
+        .flatten()
+    {
+        if c == '{' {
+            open += 1;
+        }
+        if c == '}' {
+            close += 1;
+        }
+    }
+
+    open == close
+}
+
+pub fn split_preamble(preamble_part: &[&str]) -> Option<usize> {
+    if preamble_part.len() < 2 {
+        return None;
+    }
+
+    let mut split_index = preamble_part.len() / 2;
+
+    // If the split resulted in an unmatched curly braces in the lower part, reduce the split index
+    // until curly braces are matched.
+    while split_index > 0 && !has_even_curly_braces(&preamble_part[0..split_index]) {
+        split_index -= 1;
+    }
+
+    // If we couldn't find a split with matching curly braces, try again but this time increase the
+    // split index.
+    if split_index == 0 {
+        split_index = preamble_part.len() / 2;
+        while split_index < preamble_part.len()
+            && !has_even_curly_braces(&preamble_part[0..split_index])
+        {
+            split_index += 1;
+        }
+        if split_index == preamble_part.len() {
+            return None;
+        }
+    }
+
+    Some(split_index)
+}
+
+pub fn diagnose_preamble<'a>(preamble: &'a [&'a str]) -> Result<PreambleDiagnosis<'a>, io::Error> {
+    let output = dummy_pdf_latex(preamble)?;
+    if output.status.success() {
+        return Ok(PreambleDiagnosis::Ok(output));
+    }
+
+    let mut known_good = 0;
+    let mut known_bad = preamble.len();
+    let mut bad_output = output;
+
+    while let Some(split_index) = split_preamble(&preamble[known_good..known_bad]) {
+        let split_index = split_index + known_good;
+        let output = dummy_pdf_latex(&preamble[0..split_index])?;
+        if output.status.success() {
+            known_good = split_index;
+        } else {
+            bad_output = output;
+            known_bad = split_index;
+        }
+    }
+
+    Ok(PreambleDiagnosis::OffendingLines(
+        bad_output,
+        &preamble[known_good..known_bad],
+    ))
+}
+
+pub fn latex_to_svg(preamble: &[&str], latex: &str) -> Result<String, LatexToSvgError> {
     let tmp_dir = TempDir::new("latex-to-html")?;
 
     let tex_file_path = tmp_dir.path().join("doc.tex");
@@ -159,7 +246,7 @@ pub fn remove_baseline_point(svg_el: &mut minidom::Element) -> Result<f64, Latex
 }
 
 pub fn math_to_svg(
-    preamble: &str,
+    preamble: &[&str],
     math: &Math,
 ) -> Result<(minidom::Element, SvgInfo), LatexToSvgError> {
     use Math::*;
@@ -202,10 +289,12 @@ impl Display for MathDigest {
     }
 }
 
-pub fn hash_math(preamble: &str, math: &Math) -> MathDigest {
+pub fn hash_math(preamble: &[&str], math: &Math) -> MathDigest {
     let mut hasher = Sha256::new();
 
-    hasher.update(preamble.as_bytes());
+    for line in preamble {
+        hasher.update(line.as_bytes());
+    }
 
     use Math::*;
     match math {
@@ -230,7 +319,7 @@ pub const SVG_OUT_DIR: &'static str = "img-math";
 
 pub fn emit_math_svg_files<'a, 'b>(
     out_dir: &'a Path,
-    preamble: &str,
+    preamble: &'b [&'b str],
     math: &[&'b Math<'b>],
 ) -> Result<(), (&'b Math<'b>, LatexToSvgError)> {
     let out_dir = out_dir.join(SVG_OUT_DIR);
@@ -252,22 +341,23 @@ pub fn emit_math_svg_files<'a, 'b>(
         .collect();
 
     // Compile math nodes to svgs in parallel. We write to temporary files first and rename later
-    // for two reasons:
-    // - To ensure consistency via an atomic rename.
-    // - To ensure that we have writting geometry information to the css file if the svg file
-    //   exists.
-    let new_infos: Vec<Result<SvgInfo, LatexToSvgError>> = new_math
-        .par_iter()
-        .copied()
-        .map(|math| {
-            let digest = hash_math(preamble, &math);
-            let svg_path_tmp = out_dir.join(&format!("{digest}.svg.tmp"));
+    // to ensure consistency: We don't want files containing only partial contents, and we want to
+    // have the geometry information in the css file if the svg file exists.
+    let (compiled_math_sender, compiled_math_receiver) = channel::<(&'b Math<'b>, SvgInfo)>();
+    let compile_math_result: Result<(), (&'b Math<'b>, LatexToSvgError)> =
+        new_math.par_iter().copied().try_for_each_with(
+            compiled_math_sender,
+            |compiled_math_sender, math: &'b Math<'b>| {
+                let digest = hash_math(preamble, &math);
+                let svg_path_tmp = out_dir.join(&format!("{digest}.svg.tmp"));
 
-            let (svg, svg_info) = math_to_svg(preamble, math)?;
-            fs::write(&svg_path_tmp, &String::from(&svg)).unwrap();
-            Ok(svg_info)
-        })
-        .collect();
+                let (svg, svg_info) = math_to_svg(preamble, math).map_err(|err| (math, err))?;
+                fs::write(&svg_path_tmp, &String::from(&svg)).unwrap();
+                compiled_math_sender.send((math, svg_info)).unwrap();
+                Ok(())
+            },
+        );
+    let compiled_math: Vec<(&'b Math<'b>, SvgInfo)> = compiled_math_receiver.iter().collect();
 
     // Open the css file containing geometry information about the svgs. We append if it already
     // exists and create otherwise.
@@ -280,17 +370,12 @@ pub fn emit_math_svg_files<'a, 'b>(
         .unwrap();
 
     // Write geometry info for new math svgs to the css file.
-    for (math, svg_info) in new_math.iter().copied().zip(new_infos.iter()) {
+    for (math, svg_info) in compiled_math.iter() {
         let SvgInfo {
             width_em,
             height_em,
             baseline_em,
-        } = match svg_info {
-            Ok(svg_info) => svg_info,
-            Err(_) => {
-                continue;
-            }
-        };
+        } = svg_info;
 
         let top_em = match baseline_em {
             None => 0.0,
@@ -298,7 +383,6 @@ pub fn emit_math_svg_files<'a, 'b>(
         };
 
         let digest = hash_math(preamble, &math);
-
         writedoc! {geometry_file, r#"
             img[src$="{digest}.svg"] {{
                 width: {width_em}em;
@@ -311,11 +395,7 @@ pub fn emit_math_svg_files<'a, 'b>(
     geometry_file.sync_data().unwrap();
 
     // Rename temporary svg files.
-    for (math, svg_info) in new_math.iter().copied().zip(new_infos.iter()) {
-        if svg_info.is_err() {
-            continue;
-        }
-
+    for (math, _) in compiled_math.iter() {
         let digest = hash_math(preamble, &math);
         let svg_path = out_dir.join(&format!("{digest}.svg"));
         let svg_path_tmp = out_dir.join(&format!("{digest}.svg.tmp"));
@@ -323,12 +403,5 @@ pub fn emit_math_svg_files<'a, 'b>(
         fs::rename(svg_path_tmp, svg_path).unwrap();
     }
 
-    // Return the first error, if any.
-    for (math, svg_info) in new_math.iter().copied().zip(new_infos) {
-        if let Err(err) = svg_info {
-            return Err((math, err));
-        }
-    }
-
-    Ok(())
+    compile_math_result
 }
