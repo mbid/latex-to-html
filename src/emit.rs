@@ -564,6 +564,7 @@ const STYLE: &'static str = indoc! {r#"
 
     .proof {
         margin-top: 0.5em;
+        margin-bottom: 0.5em;
     }
 
     .inline-math {
