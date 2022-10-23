@@ -158,28 +158,10 @@ pub fn latex_to_html(tex_path: &Path, bib_path: &Path, out_path: &Path) {
 }
 
 #[test]
-fn eqlog_example() {
+fn example() {
     latex_to_html(
         Path::new("example.tex"),
         Path::new("example.bib"),
         Path::new("out/example"),
-    );
-}
-
-#[test]
-fn lcc_model_example() {
-    latex_to_html(
-        Path::new("lcc-model.tex"),
-        Path::new("lcc-model.bib"),
-        Path::new("out/lcc-model"),
-    );
-}
-
-#[test]
-fn stack_project_schemes_example() {
-    latex_to_html(
-        Path::new("schemes.tex"),
-        Path::new("lcc-model.bib"),
-        Path::new("out/stacks-project/schemes"),
     );
 }
