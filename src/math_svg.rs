@@ -39,22 +39,40 @@ impl From<io::Error> for LatexToSvgError {
     }
 }
 
+pub fn pdf_latex(tex_file_path: &Path) -> Result<process::Output, io::Error> {
+    let mut cmd = Command::new("pdflatex");
+    if let Some(parent) = tex_file_path.parent() {
+        cmd.current_dir(parent);
+    }
+    cmd.arg("-interaction=nonstopmode");
+    cmd.arg(&tex_file_path);
+    let output = cmd.output()?;
+    Ok(output)
+}
+
+pub fn default_pdf_latex_output(preamble: &str) -> Result<process::Output, io::Error> {
+    let tmp_dir = TempDir::new("latex-to-html")?;
+    let tex_file_path = tmp_dir.path().join("doc.tex");
+    let mut tex_file = File::create(&tex_file_path)?;
+
+    let dummy_content = "$123$";
+    write_latex(&mut tex_file, preamble, dummy_content)?;
+    let pdf_latex_output = pdf_latex(&tex_file_path)?;
+    Ok(pdf_latex_output)
+}
+
 pub fn latex_to_svg(preamble: &str, latex: &str) -> Result<String, LatexToSvgError> {
     let tmp_dir = TempDir::new("latex-to-html")?;
 
-    let latex_file_path = tmp_dir.path().join("doc.tex");
+    let tex_file_path = tmp_dir.path().join("doc.tex");
     let pdf_file_path = tmp_dir.path().join("doc.pdf");
     let pdf_crop_file_path = tmp_dir.path().join("doc-crop.pdf");
     let svg_file_path = tmp_dir.path().join("doc.svg");
 
-    let mut latex_file = File::create(&latex_file_path).map_err(LatexToSvgError::Io)?;
-    write_latex(&mut latex_file, preamble, latex)?;
+    let mut tex_file = File::create(&tex_file_path).map_err(LatexToSvgError::Io)?;
+    write_latex(&mut tex_file, preamble, latex)?;
 
-    let mut pdf_latex_cmd = Command::new("pdflatex");
-    pdf_latex_cmd.current_dir(tmp_dir.path());
-    pdf_latex_cmd.arg("-interaction=nonstopmode");
-    pdf_latex_cmd.arg(&latex_file_path);
-    let pdf_latex_output = pdf_latex_cmd.output()?;
+    let pdf_latex_output = pdf_latex(&tex_file_path)?;
     if !pdf_latex_output.status.success() {
         return Err(LatexToSvgError::PdfLatex(pdf_latex_output));
     }
