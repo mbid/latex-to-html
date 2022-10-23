@@ -339,6 +339,16 @@ pub fn emit_math_svg_files<'a, 'b>(
         })
         .collect();
 
+    // If we have a lot of math to compile, check whether the preamble is OK first.
+    if new_math.len() > 16 {
+        let first_math = *new_math.first().unwrap();
+        let output =
+            dummy_pdf_latex(preamble).map_err(|err| (first_math, LatexToSvgError::Io(err)))?;
+        if !output.status.success() {
+            return Err((first_math, LatexToSvgError::PdfLatex(output)));
+        }
+    }
+
     // Compile math nodes to svgs in parallel. We write to temporary files first and rename later
     // for two reasons:
     // - To ensure consistency via an atomic rename.
