@@ -130,7 +130,7 @@ impl Default for DocumentConfig<'static> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Document<'a> {
-    pub preamble: String,
+    pub preamble: Vec<&'a str>,
     pub parts: Vec<DocumentPart<'a>>,
     pub config: DocumentConfig<'a>,
 }

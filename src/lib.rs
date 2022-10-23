@@ -62,7 +62,7 @@ fn parse_source<'a, O>(
 pub fn print_latex_to_svg_error(
     tex_path: &Path,
     tex_src: &str,
-    preamble: &str,
+    preamble: &[&str],
     math: &Math,
     error: &LatexToSvgError,
 ) {
@@ -149,7 +149,7 @@ pub fn latex_to_html(tex_path: &Path, bib_path: &Path, out_path: &Path) {
         print_latex_to_svg_error(
             tex_path,
             tex_src.as_str(),
-            doc.preamble.as_str(),
+            doc.preamble.as_slice(),
             math,
             &err,
         );

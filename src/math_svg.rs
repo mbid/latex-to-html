@@ -1,5 +1,6 @@
 use crate::ast::*;
 use indoc::{formatdoc, writedoc};
+use itertools::Itertools;
 use rayon::prelude::*;
 use sha2::{Digest, Sha256};
 use std::collections::HashSet;
@@ -11,7 +12,11 @@ use std::path::Path;
 use std::process::{self, Command};
 use tempdir::TempDir;
 
-fn write_latex(out: &mut impl io::Write, preamble: &str, latex: &str) -> Result<(), io::Error> {
+fn write_latex(out: &mut impl io::Write, preamble: &[&str], latex: &str) -> Result<(), io::Error> {
+    let preamble = preamble
+        .iter()
+        .copied()
+        .format_with("\n", |line, f| f(&format_args!("{}", line)));
     // TODO: Get rid of mathtools here?
     writedoc! {out, r#"
         \documentclass{{minimal}}
@@ -50,7 +55,7 @@ pub fn pdf_latex(tex_file_path: &Path) -> Result<process::Output, io::Error> {
     Ok(output)
 }
 
-pub fn default_pdf_latex_output(preamble: &str) -> Result<process::Output, io::Error> {
+pub fn default_pdf_latex_output(preamble: &[&str]) -> Result<process::Output, io::Error> {
     let tmp_dir = TempDir::new("latex-to-html")?;
     let tex_file_path = tmp_dir.path().join("doc.tex");
     let mut tex_file = File::create(&tex_file_path)?;
@@ -61,7 +66,7 @@ pub fn default_pdf_latex_output(preamble: &str) -> Result<process::Output, io::E
     Ok(pdf_latex_output)
 }
 
-pub fn latex_to_svg(preamble: &str, latex: &str) -> Result<String, LatexToSvgError> {
+pub fn latex_to_svg(preamble: &[&str], latex: &str) -> Result<String, LatexToSvgError> {
     let tmp_dir = TempDir::new("latex-to-html")?;
 
     let tex_file_path = tmp_dir.path().join("doc.tex");
@@ -159,7 +164,7 @@ pub fn remove_baseline_point(svg_el: &mut minidom::Element) -> Result<f64, Latex
 }
 
 pub fn math_to_svg(
-    preamble: &str,
+    preamble: &[&str],
     math: &Math,
 ) -> Result<(minidom::Element, SvgInfo), LatexToSvgError> {
     use Math::*;
@@ -202,10 +207,12 @@ impl Display for MathDigest {
     }
 }
 
-pub fn hash_math(preamble: &str, math: &Math) -> MathDigest {
+pub fn hash_math(preamble: &[&str], math: &Math) -> MathDigest {
     let mut hasher = Sha256::new();
 
-    hasher.update(preamble.as_bytes());
+    for line in preamble {
+        hasher.update(line.as_bytes());
+    }
 
     use Math::*;
     match math {
@@ -230,7 +237,7 @@ pub const SVG_OUT_DIR: &'static str = "img-math";
 
 pub fn emit_math_svg_files<'a, 'b>(
     out_dir: &'a Path,
-    preamble: &str,
+    preamble: &'b [&'b str],
     math: &[&'b Math<'b>],
 ) -> Result<(), (&'b Math<'b>, LatexToSvgError)> {
     let out_dir = out_dir.join(SVG_OUT_DIR);
