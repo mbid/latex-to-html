@@ -54,10 +54,18 @@ pub enum ParagraphPart<'a> {
 
 pub type Paragraph<'a> = Vec<ParagraphPart<'a>>;
 
+#[derive(Copy, Debug, Clone, PartialEq, Eq)]
+pub enum TheoremStyle {
+    Theorem,
+    Definition,
+    Remark,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TheoremLikeConfig<'a> {
     pub tag: &'a str,
     pub name: Paragraph<'a>,
+    pub style: TheoremStyle,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -98,29 +106,36 @@ impl Default for DocumentConfig<'static> {
                 TheoremLikeConfig {
                     tag: "theorem",
                     name: vec![ParagraphPart::TextToken("Theorem")],
+                    style: TheoremStyle::Theorem,
                 },
                 TheoremLikeConfig {
                     tag: "proposition",
                     name: vec![ParagraphPart::TextToken("Proposition")],
+                    style: TheoremStyle::Theorem,
                 },
                 TheoremLikeConfig {
                     tag: "definition",
                     name: vec![ParagraphPart::TextToken("Definition")],
+                    style: TheoremStyle::Definition,
                 },
                 TheoremLikeConfig {
                     tag: "lemma",
                     name: vec![ParagraphPart::TextToken("Lemma")],
+                    style: TheoremStyle::Theorem,
                 },
                 TheoremLikeConfig {
                     tag: "remark",
                     name: vec![ParagraphPart::TextToken("Remark")],
+                    style: TheoremStyle::Remark,
                 },
                 TheoremLikeConfig {
                     tag: "corollary",
                     name: vec![ParagraphPart::TextToken("Corollary")],
+                    style: TheoremStyle::Theorem,
                 },
                 TheoremLikeConfig {
                     tag: "example",
+                    style: TheoremStyle::Definition,
                     name: vec![ParagraphPart::TextToken("Example")],
                 },
             ],

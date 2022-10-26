@@ -463,6 +463,11 @@ fn write_index(out: &mut impl Write, doc: &Document, analysis: &Analysis) -> Res
                     .iter()
                     .find(|config| &config.tag == tag)
                     .unwrap();
+                let theorem_style_class = match theorem_like_config.style {
+                    TheoremStyle::Theorem => "theorem-style-theorem",
+                    TheoremStyle::Definition => "theorem-style-definition",
+                    TheoremStyle::Remark => "theorem-style-remark",
+                };
                 let label = display_label_id_attr(*label);
                 let number = analysis
                     .doc_part_numbering
@@ -475,7 +480,7 @@ fn write_index(out: &mut impl Write, doc: &Document, analysis: &Analysis) -> Res
                     number,
                 );
                 writedoc! {out, r#"
-                    <div{label} class="theorem-like">
+                    <div{label} class="theorem-like {theorem_style_class}">
                     <div class="paragraph">
                     {header}
                 "#}?;
@@ -560,6 +565,18 @@ const STYLE: &'static str = indoc! {r#"
     .theorem-like {
         margin-top: 0.5em;
         margin-bottom: 0.5em;
+    }
+
+    .theorem-style-theorem {
+        font-style: italic;
+    }
+    .theorem-style-theorem h4 {
+        font-style: normal;
+    }
+
+    .theorem-style-remark h4 {
+        font-style: italic;
+        font-weight: normal;
     }
 
     .proof {
