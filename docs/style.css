@@ -16,6 +16,18 @@ h4 {
     margin-bottom: 0.5em;
 }
 
+.theorem-style-theorem {
+    font-style: italic;
+}
+.theorem-style-theorem h4 {
+    font-style: normal;
+}
+
+.theorem-style-remark h4 {
+    font-style: italic;
+    font-weight: normal;
+}
+
 .proof {
     margin-top: 0.5em;
     margin-bottom: 0.5em;
