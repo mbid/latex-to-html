@@ -156,6 +156,13 @@ fn display_paragraph_part<'a>(
             Footnote(_) => {
                 // TODO
             }
+            Href { text, link } => {
+                write!(out, "<a href=\"{link}\">")?;
+                for part in text {
+                    display_paragraph_part(analysis, part).fmt(out)?;
+                }
+                write!(out, "</a>")?;
+            }
         }
         Ok(())
     })
@@ -258,7 +265,8 @@ fn display_title<'a>(title: Option<&'a Paragraph<'a>>) -> impl 'a + Display {
                         | Itemize(_)
                         | Todo
                         | Cite { .. }
-                        | Footnote(_) => {
+                        | Footnote(_)
+                        | Href { .. } => {
                             panic!("Invalid node in title");
                         }
                     }

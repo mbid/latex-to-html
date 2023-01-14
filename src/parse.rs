@@ -118,6 +118,33 @@ pub fn command<'a, O>(
     }
 }
 
+/// A command with two mandatory arguments, e.g. `cmd{arg1}{arg2}`.
+pub fn command2<'a, O0, O1>(
+    name: &'static str,
+    mut arg0_parser: impl FnMut(&'a str) -> Result<'a, O0>,
+    mut arg1_parser: impl FnMut(&'a str) -> Result<'a, O1>,
+) -> impl FnMut(&'a str) -> Result<'a, (O0, O1)> {
+    move |i: &'a str| {
+        let (i, _) = char('\\')(i)?;
+        let (i, _) = tag(name)(i)?;
+        let (i, _) = any_ws(i)?;
+
+        let (i, _) = char('{')(i)?;
+        let (i, _) = any_ws(i)?;
+        let (i, arg0) = arg0_parser(i)?;
+        let (i, _) = any_ws(i)?;
+        let (i, _) = char('}')(i)?;
+
+        let (i, _) = char('{')(i)?;
+        let (i, _) = any_ws(i)?;
+        let (i, arg1) = arg1_parser(i)?;
+        let (i, _) = any_ws(i)?;
+        let (i, _) = char('}')(i)?;
+
+        Ok((i, (arg0, arg1)))
+    }
+}
+
 pub fn command_with_opts<'a, Name, Opts, Args>(
     mut name_parser: impl FnMut(&'a str) -> Result<'a, Name>,
     mut opt_parser: impl FnMut(&'a str) -> Result<'a, Opts>,
@@ -358,6 +385,13 @@ pub fn eqref(i: &str) -> Result<ParagraphPart> {
     Ok((i, ParagraphPart::Ref(val)))
 }
 
+pub fn href(i: &str) -> Result<ParagraphPart> {
+    let link_parser = take_while(|c| c != '{' && c != '}' && c != ' ');
+    let (i, (link, text)) = command2("href", link_parser, paragraph)(i)?;
+    let link = link.trim();
+    Ok((i, ParagraphPart::Href { link, text }))
+}
+
 pub fn cite(i: &str) -> Result<ParagraphPart> {
     let arg_sep = tuple((any_ws, tag(","), any_ws));
     let arg_parser = intersperse0(cite_value, arg_sep);
@@ -442,6 +476,7 @@ pub fn paragraph<'a>(i: &'a str) -> Result<Paragraph<'a>> {
             enumerate,
             todo,
             footnote,
+            href,
         ))(i)
     };
 

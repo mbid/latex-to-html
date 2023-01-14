@@ -50,6 +50,10 @@ pub enum ParagraphPart<'a> {
     Itemize(Vec<Item<'a>>),
     Todo,
     Footnote(Vec<Paragraph<'a>>),
+    Href {
+        text: Paragraph<'a>,
+        link: &'a str,
+    },
 }
 
 pub type Paragraph<'a> = Vec<ParagraphPart<'a>>;
@@ -252,6 +256,9 @@ impl<'a> NodeLists<'a> {
                 pars.iter()
                     .flatten()
                     .for_each(|part| self.add_par_part(part));
+            }
+            Href { text, link: _ } => {
+                text.iter().for_each(|part| self.add_par_part(part));
             }
         }
     }
