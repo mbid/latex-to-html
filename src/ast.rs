@@ -45,6 +45,7 @@ pub enum ParagraphPart<'a> {
     Emph(Paragraph<'a>),
     Textbf(Paragraph<'a>),
     Textit(Paragraph<'a>),
+    Texttt(Paragraph<'a>),
     Qed,
     Enumerate(Vec<Item<'a>>),
     Itemize(Vec<Item<'a>>),
@@ -239,7 +240,7 @@ impl<'a> NodeLists<'a> {
             Math(math) => {
                 self.math.push(math);
             }
-            Emph(par) | Textbf(par) | Textit(par) => {
+            Emph(par) | Textbf(par) | Textit(par) | Texttt(par) => {
                 par.iter().for_each(|part| self.add_par_part(part));
             }
             Enumerate(items) | Itemize(items) => {

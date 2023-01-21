@@ -375,6 +375,11 @@ pub fn textit(i: &str) -> Result<ParagraphPart> {
     Ok((i, ParagraphPart::Textit(par)))
 }
 
+pub fn texttt(i: &str) -> Result<ParagraphPart> {
+    let (i, par) = command("texttt", paragraph)(i)?;
+    Ok((i, ParagraphPart::Texttt(par)))
+}
+
 pub fn paragraph_qed(i: &str) -> Result<ParagraphPart> {
     let (i, _) = command_no_args("qed")(i)?;
     Ok((i, ParagraphPart::Qed))
@@ -480,6 +485,7 @@ pub fn paragraph<'a>(i: &'a str) -> Result<Paragraph<'a>> {
             emph,
             textbf,
             textit,
+            texttt,
             paragraph_qed,
             itemize,
             enumerate,
