@@ -163,6 +163,13 @@ fn display_paragraph_part<'a>(
                 }
                 write!(out, "</a>")?;
             }
+            Code(code) => {
+                writedoc! {out, "
+                    <pre>
+                      {code}
+                    </pre>
+                "}?;
+            }
         }
         Ok(())
     })
@@ -266,7 +273,8 @@ fn display_title<'a>(title: Option<&'a Paragraph<'a>>) -> impl 'a + Display {
                         | Todo
                         | Cite { .. }
                         | Footnote(_)
-                        | Href { .. } => {
+                        | Href { .. }
+                        | Code(_) => {
                             panic!("Invalid node in title");
                         }
                     }

@@ -54,6 +54,7 @@ pub enum ParagraphPart<'a> {
         text: Paragraph<'a>,
         link: &'a str,
     },
+    Code(&'a str),
 }
 
 pub type Paragraph<'a> = Vec<ParagraphPart<'a>>;
@@ -260,6 +261,7 @@ impl<'a> NodeLists<'a> {
             Href { text, link: _ } => {
                 text.iter().for_each(|part| self.add_par_part(part));
             }
+            Code(_) => (),
         }
     }
 }

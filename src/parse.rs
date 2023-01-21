@@ -440,6 +440,15 @@ pub fn footnote(i: &str) -> Result<ParagraphPart> {
     Ok((i, ParagraphPart::Footnote(content)))
 }
 
+pub fn code(i: &str) -> Result<ParagraphPart> {
+    let (i, mut content) = raw_env("lstlisting")(i)?;
+    content = content.trim();
+    if content.chars().next() == Some('[') {
+        (_, content) = take_while(|c| c != ']')(content)?;
+    }
+    Ok((i, ParagraphPart::Code(content)))
+}
+
 pub fn paragraph<'a>(i: &'a str) -> Result<Paragraph<'a>> {
     let ws_part = |i: &'a str| {
         let (i, ws) = inline_ws(i)?;
@@ -477,6 +486,7 @@ pub fn paragraph<'a>(i: &'a str) -> Result<Paragraph<'a>> {
             todo,
             footnote,
             href,
+            code,
         ))(i)
     };
 
