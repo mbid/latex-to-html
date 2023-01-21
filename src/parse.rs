@@ -449,7 +449,11 @@ pub fn code(i: &str) -> Result<ParagraphPart> {
     let (i, mut content) = raw_env("lstlisting")(i)?;
     content = content.trim();
     if content.chars().next() == Some('[') {
-        (_, content) = take_while(|c| c != ']')(content)?;
+        (content, _) = take_while(|c| c != ']')(content)?;
+        if content.chars().next() == Some(']') {
+            content = &content[1..];
+        }
+        content = content.trim();
     }
     Ok((i, ParagraphPart::Code(content)))
 }
