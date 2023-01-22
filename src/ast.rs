@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::HashSet;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -35,7 +36,7 @@ pub struct Item<'a> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParagraphPart<'a> {
     InlineWhitespace(&'a str),
-    TextToken(&'a str),
+    TextToken(Cow<'a, str>),
     Math(Math<'a>),
     Ref(&'a str),
     Cite {
@@ -111,38 +112,38 @@ impl Default for DocumentConfig<'static> {
             theorem_like_configs: vec![
                 TheoremLikeConfig {
                     tag: "theorem",
-                    name: vec![ParagraphPart::TextToken("Theorem")],
+                    name: vec![ParagraphPart::TextToken(Cow::from("Theorem"))],
                     style: TheoremStyle::Theorem,
                 },
                 TheoremLikeConfig {
                     tag: "proposition",
-                    name: vec![ParagraphPart::TextToken("Proposition")],
+                    name: vec![ParagraphPart::TextToken(Cow::from("Proposition"))],
                     style: TheoremStyle::Theorem,
                 },
                 TheoremLikeConfig {
                     tag: "definition",
-                    name: vec![ParagraphPart::TextToken("Definition")],
+                    name: vec![ParagraphPart::TextToken(Cow::from("Definition"))],
                     style: TheoremStyle::Definition,
                 },
                 TheoremLikeConfig {
                     tag: "lemma",
-                    name: vec![ParagraphPart::TextToken("Lemma")],
+                    name: vec![ParagraphPart::TextToken(Cow::from("Lemma"))],
                     style: TheoremStyle::Theorem,
                 },
                 TheoremLikeConfig {
                     tag: "remark",
-                    name: vec![ParagraphPart::TextToken("Remark")],
+                    name: vec![ParagraphPart::TextToken(Cow::from("Remark"))],
                     style: TheoremStyle::Remark,
                 },
                 TheoremLikeConfig {
                     tag: "corollary",
-                    name: vec![ParagraphPart::TextToken("Corollary")],
+                    name: vec![ParagraphPart::TextToken(Cow::from("Corollary"))],
                     style: TheoremStyle::Theorem,
                 },
                 TheoremLikeConfig {
                     tag: "example",
                     style: TheoremStyle::Definition,
-                    name: vec![ParagraphPart::TextToken("Example")],
+                    name: vec![ParagraphPart::TextToken(Cow::from("Example"))],
                 },
             ],
         }

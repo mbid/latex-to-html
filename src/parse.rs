@@ -1,11 +1,12 @@
 use crate::ast::*;
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take_while, take_while1};
-use nom::character::complete::{char, digit1, none_of, one_of};
+use nom::character::complete::{char, digit1, none_of, one_of, satisfy};
 use nom::combinator::{cut, eof, opt};
 use nom::multi::{many0, many1};
 use nom::sequence::{pair, tuple};
 use nom::{IResult, Parser};
+use std::borrow::Cow;
 use std::str::FromStr;
 
 pub type Error<'a> = nom::error::Error<&'a str>;
@@ -277,17 +278,32 @@ pub fn raw_env<'a>(name: &'static str) -> impl Fn(&'a str) -> Result<'a, &'a str
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct TextToken<'a>(&'a str);
-
 // TODO: [] is special only in certain contexts, e.g. when parsing the options of a command.
 const SPECIAL_CHARS: &'static str = " \n\t#$%&{}[]_~^\\";
 
-pub fn text_token(i: &str) -> Result<TextToken> {
-    let before = i;
-    let (i, _) = none_of(SPECIAL_CHARS)(i)?;
-    let (i, _) = take_while(|c| !SPECIAL_CHARS.contains(c))(i)?;
-    Ok((i, TextToken(consumed_slice(before, i))))
+pub fn text_token_char(i: &str) -> Result<char> {
+    let (i, c) = satisfy(|c| c == '\\' || !SPECIAL_CHARS.contains(c))(i)?;
+    if c == '\\' {
+        one_of(SPECIAL_CHARS)(i)
+    } else {
+        Ok((i, c))
+    }
+}
+
+pub fn text_token(i: &str) -> Result<ParagraphPart> {
+    let (i, non_special) = take_while(|c| !SPECIAL_CHARS.contains(c))(i)?;
+    let (i, unescaped) = many0(text_token_char)(i)?;
+    if non_special.is_empty() && unescaped.is_empty() {
+        return Err(nom::Err::Error(Error::new(i, nom::error::ErrorKind::IsNot)));
+    }
+
+    if unescaped.is_empty() {
+        Ok((i, ParagraphPart::TextToken(Cow::from(non_special))))
+    } else {
+        let mut result = non_special.to_string();
+        result.extend(unescaped);
+        Ok((i, ParagraphPart::TextToken(Cow::from(result))))
+    }
 }
 
 pub fn inline_math(i: &str) -> Result<Math> {
@@ -463,10 +479,6 @@ pub fn paragraph<'a>(i: &'a str) -> Result<Paragraph<'a>> {
         let (i, ws) = inline_ws(i)?;
         Ok((i, ParagraphPart::InlineWhitespace(ws.0)))
     };
-    let text = |i: &'a str| {
-        let (i, tok) = text_token(i)?;
-        Ok((i, ParagraphPart::TextToken(tok.0)))
-    };
     let ref_command = |i: &'a str| {
         let (i, r) = ref_command(i)?;
         Ok((i, ParagraphPart::Ref(r.0)))
@@ -478,7 +490,7 @@ pub fn paragraph<'a>(i: &'a str) -> Result<Paragraph<'a>> {
 
     let non_ws_part = |i: &'a str| {
         alt((
-            text,
+            text_token,
             display_math.map(ParagraphPart::Math),
             display_math_double_dollar.map(ParagraphPart::Math),
             inline_math.map(ParagraphPart::Math),
