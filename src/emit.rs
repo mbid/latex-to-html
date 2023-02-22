@@ -177,6 +177,10 @@ fn display_paragraph_part<'a>(
                     </pre>
                 "}?;
             }
+            Tilde => {
+                // Emit non-breaking whitespace.
+                write!(out, "&nbsp;")?;
+            }
         }
         Ok(())
     })
@@ -268,6 +272,11 @@ fn display_title<'a>(title: Option<&'a Paragraph<'a>>) -> impl 'a + Display {
                             if ws.len() > 0 {
                                 write!(out, " ")?;
                             }
+                        }
+                        Tilde => {
+                            // TODO: Is this allowed in a title?
+                            // Emit non-breaking whitespace.
+                            write!(out, "&nbsp;")?;
                         }
                         Math(_)
                         | Ref(_)

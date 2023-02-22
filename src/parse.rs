@@ -474,6 +474,11 @@ pub fn code(i: &str) -> Result<ParagraphPart> {
     Ok((i, ParagraphPart::Code(content)))
 }
 
+pub fn tilde(i: &str) -> Result<ParagraphPart> {
+    let (i, _) = tag("~")(i)?;
+    Ok((i, ParagraphPart::Tilde))
+}
+
 pub fn paragraph<'a>(i: &'a str) -> Result<Paragraph<'a>> {
     let ws_part = |i: &'a str| {
         let (i, ws) = inline_ws(i)?;
@@ -509,6 +514,7 @@ pub fn paragraph<'a>(i: &'a str) -> Result<Paragraph<'a>> {
             footnote,
             href,
             code,
+            tilde,
         ))(i)
     };
 

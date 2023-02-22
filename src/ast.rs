@@ -57,6 +57,7 @@ pub enum ParagraphPart<'a> {
         link: &'a str,
     },
     Code(&'a str),
+    Tilde,
 }
 
 pub type Paragraph<'a> = Vec<ParagraphPart<'a>>;
@@ -264,6 +265,7 @@ impl<'a> NodeLists<'a> {
                 text.iter().for_each(|part| self.add_par_part(part));
             }
             Code(_) => (),
+            Tilde => (),
         }
     }
 }
